@@ -47,6 +47,8 @@ const schema = defineSchema(
       tags: v.array(v.string()),
       embedUrl: v.string(),
       playUrl: v.string(),
+      /** Optional mirror used only when playing through the proxy. */
+      proxyUrl: v.optional(v.string()),
       featured: v.boolean(),
       addedBy: v.optional(v.id("users")),
       createdAt: v.number(),

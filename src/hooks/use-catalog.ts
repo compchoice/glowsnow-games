@@ -26,6 +26,7 @@ export function useCatalog(): { games: CatalogGame[]; isLoading: boolean } {
         tags: game.tags,
         embedUrl: game.embedUrl,
         playUrl: game.playUrl,
+        proxyUrl: game.proxyUrl ?? undefined,
         featured: game.featured,
         source: "database",
       });

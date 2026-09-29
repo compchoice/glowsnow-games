@@ -10,6 +10,7 @@ const gameInput = {
   tags: v.array(v.string()),
   embedUrl: v.string(),
   playUrl: v.string(),
+  proxyUrl: v.optional(v.string()),
   featured: v.boolean(),
 };
 
@@ -51,6 +52,7 @@ export const upsert = mutation({
       tags: args.tags.map((tag) => tag.trim()).filter(Boolean),
       embedUrl: args.embedUrl.trim(),
       playUrl: (args.playUrl.trim() || args.embedUrl).trim(),
+      proxyUrl: args.proxyUrl?.trim() || undefined,
       featured: args.featured,
     };
 
@@ -104,6 +106,7 @@ export const importDefaults = mutation({
         tags: v.array(v.string()),
         embedUrl: v.string(),
         playUrl: v.string(),
+        proxyUrl: v.optional(v.string()),
         featured: v.boolean(),
       }),
     ),

@@ -6,6 +6,8 @@ export type CatalogGame = {
   tags: string[];
   embedUrl: string;
   playUrl: string;
+  /** Optional mirror used only when playing through the proxy. */
+  proxyUrl?: string;
   featured: boolean;
   /** Built-in starters vs. games the owner added from the admin area. */
   source: "built-in" | "database";
@@ -28,6 +30,8 @@ export const DEFAULT_GAMES: GameSeed[] = [
     tags: ["rhythm", "music", "arrow keys"],
     embedUrl: "https://kdata1.com/2020/05/fnf/",
     playUrl: "https://kdata1.com/2020/05/fnf/",
+    // kdata1 refuses server-side fetches, so proxy mode uses this mirror.
+    proxyUrl: "https://www.fridaynightfunkin.net/",
     featured: true,
   },
   {
@@ -61,6 +65,7 @@ export const DEFAULT_GAMES: GameSeed[] = [
     tags: ["endless", "reflex", "neon"],
     embedUrl: "https://kdata1.com/2020/05/slope/",
     playUrl: "https://kdata1.com/2020/05/slope/",
+    proxyUrl: "https://slopegame.io/",
     featured: false,
   },
   {
@@ -83,6 +88,28 @@ export const DEFAULT_GAMES: GameSeed[] = [
     tags: ["strategy", "classic"],
     embedUrl: "https://playpager.com/embed/checkers/index.html",
     playUrl: "https://playpager.com/embed/checkers/index.html",
+    featured: false,
+  },
+  {
+    slug: "solitaire",
+    title: "Solitaire",
+    category: "Cards",
+    description:
+      "Classic Klondike solitaire with a timer and a running score. A quiet one for study hall.",
+    tags: ["cards", "solo", "relaxing"],
+    embedUrl: "https://playpager.com/embed/solitaire/index.html",
+    playUrl: "https://playpager.com/embed/solitaire/index.html",
+    featured: false,
+  },
+  {
+    slug: "reversi",
+    title: "Reversi",
+    category: "Board",
+    description:
+      "Also known as Othello. Flip your opponent's discs and finish with the most on the board.",
+    tags: ["strategy", "classic", "quick"],
+    embedUrl: "https://playpager.com/embed/reversi/index.html",
+    playUrl: "https://playpager.com/embed/reversi/index.html",
     featured: false,
   },
 ];

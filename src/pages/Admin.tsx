@@ -21,6 +21,7 @@ type FormState = {
   tags: string;
   embedUrl: string;
   playUrl: string;
+  proxyUrl: string;
   featured: boolean;
 };
 
@@ -32,6 +33,7 @@ const EMPTY_FORM: FormState = {
   tags: "",
   embedUrl: "",
   playUrl: "",
+  proxyUrl: "",
   featured: false,
 };
 
@@ -97,6 +99,7 @@ export default function Admin() {
           .filter(Boolean),
         embedUrl: form.embedUrl,
         playUrl: form.playUrl || form.embedUrl,
+        proxyUrl: form.proxyUrl || undefined,
         featured: form.featured,
       });
       setNotice({
@@ -127,6 +130,7 @@ export default function Admin() {
           tags: game.tags,
           embedUrl: game.embedUrl,
           playUrl: game.playUrl,
+          proxyUrl: game.proxyUrl,
           featured: game.featured,
         })),
       });
@@ -223,6 +227,19 @@ export default function Admin() {
                   setForm({ ...form, playUrl: event.target.value })
                 }
                 placeholder="https://example.com/game/"
+              />
+            </label>
+            <label className="space-y-1.5 text-sm sm:col-span-2">
+              <span className="text-muted-foreground">
+                Proxy mirror URL (optional — used only in proxy mode, for hosts
+                that block server-side fetches)
+              </span>
+              <Input
+                value={form.proxyUrl}
+                onChange={(event) =>
+                  setForm({ ...form, proxyUrl: event.target.value })
+                }
+                placeholder="https://mirror.example.com/game/"
               />
             </label>
             <label className="space-y-1.5 text-sm sm:col-span-2">
@@ -358,6 +375,7 @@ export default function Admin() {
                               tags: game.tags.join(", "),
                               embedUrl: game.embedUrl,
                               playUrl: game.playUrl,
+                              proxyUrl: game.proxyUrl ?? "",
                               featured: game.featured,
                             });
                             setShowForm(true);
