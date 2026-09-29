@@ -61,6 +61,9 @@ export default function Messages() {
   }
 
   const active = conversations?.find((row) => row.partnerId === partnerId);
+  // Opening a brand new conversation from a profile means there is no row in
+  // the list yet, so fall back to whatever the thread query already knows.
+  const activeName = thread?.partnerName ?? active?.partnerName ?? "Conversation";
 
   return (
     <PageShell>
@@ -134,7 +137,7 @@ export default function Messages() {
                   to={`/u/${partnerId}`}
                   className="text-sm font-medium transition-colors hover:text-primary"
                 >
-                  {active?.partnerName ?? "Conversation"}
+                  {activeName}
                 </Link>
                 <Button
                   variant="ghost"
@@ -143,7 +146,7 @@ export default function Messages() {
                     setReporting({
                       type: "user",
                       id: partnerId,
-                      label: `Report ${active?.partnerName ?? "this member"}`,
+                      label: `Report ${activeName}`,
                     })
                   }
                 >
@@ -215,14 +218,5 @@ export default function Messages() {
         onOpenChange={(open) => !open && setReporting(null)}
       />
     </PageShell>
-  );
-}
-
-/** Used by a profile's "Message" button, which opens the conversation. */
-export function DmLink({ userId }: { userId: string }) {
-  return (
-    <Button asChild variant="outline" size="sm">
-      <Link to={`/messages?with=${userId}`}>Message</Link>
-    </Button>
   );
 }

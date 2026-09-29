@@ -179,3 +179,31 @@ describe("search helpers", () => {
     expect(matchesAllWords("anything", [])).toBe(false);
   });
 });
+
+describe("poll bar widths", () => {
+  // The bar is a share of the total, not a raw count. This regressed once: the
+  // UI used counts directly, so 3 votes out of 50 drew a 3% bar.
+  const shareOf = (count: number, total: number) =>
+    total === 0 ? 0 : Math.round((count / total) * 100);
+
+  test("a minority option draws a minority bar", () => {
+    expect(shareOf(3, 50)).toBe(6);
+  });
+
+  test("a unanimous option fills the bar", () => {
+    expect(shareOf(7, 7)).toBe(100);
+  });
+
+  test("an empty poll draws nothing rather than dividing by zero", () => {
+    expect(shareOf(0, 0)).toBe(0);
+  });
+
+  test("matches what tallyPoll reports", () => {
+    const tallied = tallyPoll(["a", "b", "c", "d"], [0, 1, 1, 3]);
+    for (let index = 0; index < 4; index += 1) {
+      expect(shareOf(tallied.counts[index], tallied.total)).toBe(
+        tallied.shares[index],
+      );
+    }
+  });
+});

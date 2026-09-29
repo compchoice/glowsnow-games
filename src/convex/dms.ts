@@ -22,15 +22,18 @@ export const conversations = query({
 
     // Two indexed reads rather than a scan: Convex cannot express "sent to me
     // OR sent by me" in one query, so both sides are read and merged in memory.
+    // Capped, because the list only needs the most recent of each.
     const [sent, received] = await Promise.all([
       ctx.db
         .query("directMessages")
         .withIndex("by_sender", (q) => q.eq("senderId", user._id))
-        .collect(),
+        .order("desc")
+        .take(CONVERSATION_SCAN),
       ctx.db
         .query("directMessages")
         .withIndex("by_recipient", (q) => q.eq("recipientId", user._id))
-        .collect(),
+        .order("desc")
+        .take(CONVERSATION_SCAN),
     ]);
 
     const byPartner = new Map<
@@ -93,9 +96,13 @@ export const thread = query({
       .withIndex("by_key", (q) => q.eq("key", dmKey(user._id, partnerId)))
       .collect();
 
+    // The member can be deleted between the id check and this read.
+    const partnerDoc = await ctx.db.get(partner);
+    if (!partnerDoc) return null;
+
     return {
       partnerId,
-      partnerName: displayName((await ctx.db.get(partner))!),
+      partnerName: displayName(partnerDoc),
       messages: rows.slice(0, MESSAGE_LIMIT).map((row) => ({
         _id: row._id,
         body: row.body,

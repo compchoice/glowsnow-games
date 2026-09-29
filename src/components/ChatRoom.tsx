@@ -77,6 +77,7 @@ export function ChatRoom({
   const directory = useMemberDirectory();
 
   // One reaction query for the whole visible room, rather than one per message.
+  // The newest messages are the ones on screen, so take them from the end.
   const visibleIds = useMemo(
     () => (messages ?? []).map((message) => message._id as string),
     [messages],
@@ -84,7 +85,7 @@ export function ChatRoom({
   const reactions = useQuery(
     api.reactions.forTargets,
     visibleIds.length > 0
-      ? { targetType: "chat", targetIds: visibleIds.slice(0, 60) }
+      ? { targetType: "chat", targetIds: visibleIds.slice(-60) }
       : "skip",
   );
 
@@ -193,7 +194,7 @@ export function ChatRoom({
   const draftRows = Math.min(4, Math.max(1, draft.split("\n").length));
 
   return (
-    <div className="relative flex h-[calc(100dvh-14rem)] min-h-[26rem] flex-col overflow-hidden bg-card/50">
+    <div className="relative flex h-full min-h-0 flex-col overflow-hidden bg-card/50">
       {/* Room header */}
       <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border/70 px-4 py-2.5">
         <div className="flex min-w-0 items-center gap-2">

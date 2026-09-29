@@ -130,9 +130,10 @@ export function Messages({
   }) as MessageDoc[] | undefined;
   const directory = useMemberDirectory();
 
-  // One reaction query for the page, not one per message.
+  // One reaction query for the page, not one per message. The newest posts are
+  // the ones on screen, so take them from the end.
   const reactionTargets = useMemo(
-    () => (messages ?? []).map((message) => message._id as string).slice(0, 60),
+    () => (messages ?? []).map((message) => message._id as string).slice(-60),
     [messages],
   );
   const reactions = useQuery(

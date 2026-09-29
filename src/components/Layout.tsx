@@ -15,7 +15,7 @@ import { Button } from "@/components/ui/button";
 import { NAV_LINKS, SITE_NAME, SITE_TAGLINE } from "@/lib/site";
 import { cn } from "@/lib/utils";
 import { SiteSearch } from "@/components/SiteSearch";
-import { LogOut, Menu, LayoutDashboard, Lightbulb, Mail, Sparkles, X } from "lucide-react";
+import { LogOut, Menu, LayoutDashboard, Lightbulb, Mail, Search, Sparkles, X } from "lucide-react";
 
 /** Snowflakes drifting across the wordmark. Decorative, so hidden from AT. */
 const FLAKES = [
@@ -64,6 +64,7 @@ export function SiteHeader() {
   const { isAuthenticated, user, signOut } = useAuth();
   const navigate = useNavigate();
   const [menuOpen, setMenuOpen] = useState(false);
+  const [searchOpen, setSearchOpen] = useState(false);
   const status = useQuery(
     api.users.adminStatus,
     isAuthenticated ? {} : "skip",
@@ -99,8 +100,9 @@ export function SiteHeader() {
             </RouterNavLink>
           )}
           {isAuthenticated && (
-            <RouterNavLink to="/messages" className={linkClass}>
+            <RouterNavLink to="/messages" className={linkClass} title="Messages">
               <Mail className="size-4" />
+              <span className="sr-only">Messages</span>
             </RouterNavLink>
           )}
           {status?.isAdmin && (
@@ -111,8 +113,24 @@ export function SiteHeader() {
         </nav>
 
         <div className="ml-auto flex items-center gap-2">
-          <div className="hidden w-56 lg:block">
-            <SiteSearch />
+          {/* A toggle rather than a permanent box: the nav already carries
+              seven links, and a fixed search field would push the header past
+              the edge of a laptop screen. */}
+          <div className="relative">
+            <Button
+              variant="ghost"
+              size="icon-sm"
+              onClick={() => setSearchOpen((open) => !open)}
+              aria-label="Search the site"
+              aria-expanded={searchOpen}
+            >
+              {searchOpen ? <X className="size-4" /> : <Search className="size-4" />}
+            </Button>
+            {searchOpen && (
+              <div className="absolute right-0 top-full z-50 mt-2 w-[min(22rem,calc(100vw-2rem))]">
+                <SiteSearch />
+              </div>
+            )}
           </div>
           <SettingsMenu />
           {isAuthenticated && <NotificationBell />}
@@ -177,6 +195,18 @@ export function SiteHeader() {
 
       {menuOpen && (
         <nav className="border-t border-border/70 px-4 py-2 md:hidden">
+          <div className="px-3 py-2">
+            <SiteSearch />
+          </div>
+          {isAuthenticated && (
+            <RouterNavLink
+              to="/messages"
+              onClick={() => setMenuOpen(false)}
+              className="block rounded-lg px-3 py-2 text-sm text-muted-foreground hover:bg-accent hover:text-foreground"
+            >
+              Messages
+            </RouterNavLink>
+          )}
           {[...NAV_LINKS, ...(status?.isModerator ? [{ label: "Staff", to: "/staff" }] : []), ...(status?.isAdmin ? [{ label: "Admin", to: "/admin" }] : [])].map(
             (link) => (
               <RouterNavLink

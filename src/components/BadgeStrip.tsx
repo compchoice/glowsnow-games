@@ -6,12 +6,11 @@ import { achievementByKey, rankForPoints, nextRank } from "@/lib/engagement";
 
 /** A member's earned badges and rank, shown on their profile. */
 export function BadgeStrip({ userId }: { userId: string }) {
-  const id = userId as Id<"users">;
-  const result = useQuery(
-    api.achievements.forUser,
-    // A malformed id in the URL must not throw during render.
-    /^kg2[a-z0-9]{20,}$/.test(userId) ? { userId: id } : "skip",
-  );
+  // The id comes from profiles.get, which already validated it server-side, so
+  // there is nothing to re-check here.
+  const result = useQuery(api.achievements.forUser, {
+    userId: userId as Id<"users">,
+  });
 
   if (!result || result.earned.length === 0) return null;
 

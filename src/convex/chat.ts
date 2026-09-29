@@ -215,10 +215,11 @@ export const send = mutation({
 
     // Badges are awarded here rather than on a read path, so playing the site
     // does the awarding. award() is a no-op once the badge is held.
+    // Bounded: the busiest badge needs 50 posts, so counting past that is waste.
     const posted = await ctx.db
       .query("chatMessages")
       .withIndex("by_author", (q) => q.eq("authorId", user._id))
-      .collect();
+      .take(50);
     if (posted.length >= 1) await award(ctx, user, "first-post");
     if (posted.length >= 50) await award(ctx, user, "chatter");
 

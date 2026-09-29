@@ -13,7 +13,12 @@ import { Loader2, Plus, X } from "lucide-react";
 
 /** Community polls. One vote per member, and a vote can be taken back. */
 export default function Polls() {
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, user } = useAuth();
+  const status = useQuery(api.users.adminStatus, isAuthenticated ? {} : "skip");
+  // The server only lets the author or staff close a poll, so do not offer the
+  // button to anybody else.
+  const canClose = (authorId: string) =>
+    isAuthenticated && (authorId === user?._id || !!status?.isModerator);
   const polls = useQuery(api.polls.list);
   const vote = useMutation(api.polls.vote);
   const create = useMutation(api.polls.create);
@@ -165,7 +170,10 @@ export default function Polls() {
 
             <ul className="mt-3 space-y-2">
               {poll.options.map((option, index) => {
-                const share = poll.total === 0 ? 0 : poll.counts[index];
+                // The bar is a share of the total, not a raw count — otherwise
+                // three votes out of fifty draws a 3% bar and looks broken.
+                const share =
+                  poll.total === 0 ? 0 : Math.round((poll.counts[index] / poll.total) * 100);
                 const leading = poll.leaderIndex === index && poll.total > 0;
                 return (
                   <li key={option}>
@@ -204,7 +212,7 @@ export default function Polls() {
                 ? `${poll.closed ? "closed" : "closes"} ${formatDistanceToNow(poll.endsAt, { addSuffix: true })}`
                 : "no closing date"}{" "}
               · asked by {poll.authorName}
-              {!poll.closed && isAuthenticated && (
+              {!poll.closed && canClose(poll.authorId) && (
                 <>
                   {" · "}
                   <button

@@ -44,7 +44,7 @@ export function ChatServer() {
   return (
     <div className="grid gap-3 lg:grid-cols-[13rem_minmax(0,1fr)_15rem]">
       {/* Channel sidebar */}
-      <aside className="flex flex-col gap-1 rounded-xl border border-border/70 bg-card/50 p-2">
+      <aside className="flex min-h-0 flex-col gap-1 overflow-y-auto rounded-xl border border-border/70 bg-card/50 p-2">
         <p className="px-2 pt-1 pb-2 text-[11px] font-semibold tracking-[0.18em] text-muted-foreground uppercase">
           Dex:Active
         </p>
@@ -96,16 +96,19 @@ export function ChatServer() {
         )}
       </aside>
 
-      {/* Conversation */}
-      <div className="flex min-w-0 flex-col gap-3">
-        <div className="overflow-hidden rounded-xl border border-border/70">
+      {/* Conversation. The column is bounded to one viewport so the thread
+          panel below the room does not push the whole page past the fold. */}
+      <div className="flex h-[calc(100dvh-14rem)] min-h-[30rem] min-w-0 flex-col gap-3">
+        <div className="min-h-0 flex-1 overflow-hidden rounded-xl border border-border/70">
           <ChatRoom channel={active.id} topic={active.topic} />
         </div>
-        <ThreadPanel channel={active.id} />
+        <div className="max-h-[38%] shrink-0 overflow-y-auto">
+          <ThreadPanel channel={active.id} />
+        </div>
       </div>
 
       {/* Member list */}
-      <aside className="flex flex-col gap-1 rounded-xl border border-border/70 bg-card/50 p-2">
+      <aside className="flex min-h-0 flex-col gap-1 overflow-y-auto rounded-xl border border-border/70 bg-card/50 p-2">
         <p className="px-2 pt-1 pb-2 text-[11px] font-semibold tracking-[0.18em] text-muted-foreground uppercase">
           Online — {presence?.onlineCount ?? 0}
         </p>

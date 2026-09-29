@@ -42,6 +42,7 @@ export const list = query({
           question: poll.question,
           options: poll.options,
           authorName: poll.authorName,
+          authorId: poll.authorId,
           createdAt: poll.createdAt,
           endsAt: poll.endsAt ?? null,
           closed: poll.endsAt !== undefined && poll.endsAt <= Date.now(),
