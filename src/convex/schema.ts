@@ -57,6 +57,22 @@ const schema = defineSchema(
       .index("by_slug", ["slug"])
       .index("by_category", ["category"]),
 
+    // The live chat room. High volume, flat (no threads), newest last.
+    chatMessages: defineTable({
+      authorId: v.id("users"),
+      authorName: v.string(),
+      body: v.string(),
+      createdAt: v.number(),
+    }).index("by_createdAt", ["createdAt"]),
+
+    // Who is in the chat right now, and who is mid-sentence. One row per user.
+    chatPresence: defineTable({
+      userId: v.id("users"),
+      name: v.string(),
+      lastSeenAt: v.number(),
+      typingAt: v.optional(v.number()),
+    }).index("by_userId", ["userId"]),
+
     // Community messages (scope "community") and game comments (scope "game").
     messages: defineTable({
       scope: scopeValidator,

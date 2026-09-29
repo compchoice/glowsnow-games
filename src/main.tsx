@@ -23,6 +23,7 @@ const Games = lazy(() => import("./pages/Games.tsx"));
 const GameDetail = lazy(() => import("./pages/GameDetail.tsx"));
 const ProxyPage = lazy(() => import("./pages/Proxy.tsx"));
 const Community = lazy(() => import("./pages/Community.tsx"));
+const Chat = lazy(() => import("./pages/Chat.tsx"));
 const Dashboard = lazy(() => import("./pages/Dashboard.tsx"));
 const Admin = lazy(() => import("./pages/Admin.tsx"));
 const AuthPage = lazy(() => import("./pages/Auth.tsx"));
@@ -46,6 +47,7 @@ createRoot(document.getElementById("root")!).render(
               <Route path="/games/:slug" element={<GameDetail />} />
               <Route path="/proxy" element={<ProxyPage />} />
               <Route path="/community" element={<Community />} />
+              <Route path="/chat" element={<Chat />} />
               <Route
                 path="/auth"
                 element={<AuthPage redirectAfterAuth="/dashboard" />}
