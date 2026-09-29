@@ -16,6 +16,12 @@ export const roleValidator = v.union(
 );
 export type Role = Infer<typeof roleValidator>;
 
+/** Where a message lives: the community lounge, or a game's comment thread. */
+export const scopeValidator = v.union(
+  v.literal("community"),
+  v.literal("game"),
+);
+
 const schema = defineSchema(
   {
     // default auth tables using convex auth.
@@ -32,12 +38,38 @@ const schema = defineSchema(
       role: v.optional(roleValidator), // role of the user. do not remove
     }).index("email", ["email"]), // index for the email. do not remove or modify
 
-    // add other tables here
+    // The playable catalog. Owners manage this from the admin area.
+    games: defineTable({
+      slug: v.string(),
+      title: v.string(),
+      category: v.string(),
+      description: v.string(),
+      tags: v.array(v.string()),
+      embedUrl: v.string(),
+      playUrl: v.string(),
+      featured: v.boolean(),
+      addedBy: v.optional(v.id("users")),
+      createdAt: v.number(),
+      updatedAt: v.optional(v.number()),
+    })
+      .index("by_slug", ["slug"])
+      .index("by_category", ["category"]),
 
-    // tableName: defineTable({
-    //   ...
-    //   // table fields
-    // }).index("by_field", ["field"])
+    // Community messages (scope "community") and game comments (scope "game").
+    messages: defineTable({
+      scope: scopeValidator,
+      gameSlug: v.optional(v.string()),
+      parentId: v.optional(v.id("messages")),
+      authorId: v.id("users"),
+      authorName: v.string(),
+      body: v.string(),
+      createdAt: v.number(),
+      pinned: v.optional(v.boolean()),
+    })
+      .index("by_scope", ["scope", "createdAt"])
+      .index("by_game", ["gameSlug", "createdAt"])
+      .index("by_parent", ["parentId"])
+      .index("by_author", ["authorId", "createdAt"]),
   },
   {
     schemaValidation: false,

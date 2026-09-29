@@ -42,6 +42,7 @@ function Auth({ redirectAfterAuth }: AuthProps = {}) {
     searchParams.get("returnTo"),
     redirectAfterAuth,
   );
+  const isSignup = searchParams.get("mode") === "signup";
   const [step, setStep] = useState<"signIn" | { email: string }>("signIn");
   const [otp, setOtp] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -130,9 +131,13 @@ function Auth({ redirectAfterAuth }: AuthProps = {}) {
                       onClick={() => navigate("/")}
                     />
                   </div>
-                <CardTitle className="text-xl">Get Started</CardTitle>
+                <CardTitle className="text-xl">
+                  {isSignup ? "Create your account" : "Sign in to Dex:Active"}
+                </CardTitle>
                 <CardDescription>
-                  Enter your email to log in or sign up
+                  {isSignup
+                    ? "Use your email — we'll send a one-time code, no password needed."
+                    : "Enter your email and we'll send you a one-time code."}
                 </CardDescription>
               </CardHeader>
               <form onSubmit={handleEmailSubmit}>
@@ -278,7 +283,7 @@ function Auth({ redirectAfterAuth }: AuthProps = {}) {
           )}
 
           <div className="py-4 px-6 text-xs text-center text-muted-foreground bg-muted border-t rounded-b-lg">
-            Secured by{" "}
+            Hosted on{" "}
             <a
               href="https://freebuff.com"
               target="_blank"

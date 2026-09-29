@@ -1,4 +1,12 @@
+import { useState } from "react";
+import { Link } from "react-router";
+import { useMutation, useQuery } from "convex/react";
+import { formatDistanceToNow } from "date-fns";
+import { api } from "@/convex/_generated/api";
+import { PageShell } from "@/components/Layout";
+import { Eyebrow } from "@/components/SiteChrome";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import {
   Card,
   CardContent,
@@ -6,245 +14,258 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { useAuth } from "@/hooks/use-auth";
-import { devStore, useDevTools } from "@/lib/dev-store";
-import { DEV_COMMANDS } from "@/components/DevConsole";
 import {
+  Crown,
   Gamepad2,
-  Globe,
-  Snowflake,
+  MessageSquare,
+  Search,
+  Shield,
+  Sparkles,
   Terminal,
-  LogOut,
-  Command,
+  Users,
 } from "lucide-react";
-import { useNavigate, Link } from "react-router";
 
 export default function Dashboard() {
-  const { user, signOut } = useAuth();
-  const [state, setState] = useDevTools();
-  const navigate = useNavigate();
+  const { user } = useAuth();
+  const mine = useQuery(api.messages.mine);
+  const status = useQuery(api.users.adminStatus);
+  const rename = useMutation(api.users.rename);
+  const claimAdmin = useMutation(api.users.claimAdmin);
 
-  const handleSignOut = async () => {
-    await signOut();
-    navigate("/");
-  };
+  const [name, setName] = useState("");
+  const [notice, setNotice] = useState<{ tone: "ok" | "error"; text: string } | null>(
+    null,
+  );
 
-  const cloakTarget = state.panicTab
-    ? `${state.panicTab.label} — "${state.panicTab.title}"`
-    : "No disguise active";
+  const posts = (mine ?? []).filter((message) => !message.parentId);
+  const comments = (mine ?? []).filter((message) => message.parentId);
+
+  async function handleRename() {
+    if (!name.trim()) return;
+    try {
+      await rename({ name });
+      setNotice({ tone: "ok", text: "Display name updated." });
+      setName("");
+    } catch (error) {
+      setNotice({
+        tone: "error",
+        text: error instanceof Error ? error.message : "Could not save that.",
+      });
+    }
+  }
+
+  async function handleClaim() {
+    try {
+      const result = await claimAdmin();
+      setNotice({
+        tone: result.claimed ? "ok" : "error",
+        text: result.reason,
+      });
+    } catch (error) {
+      setNotice({
+        tone: "error",
+        text: error instanceof Error ? error.message : "Could not claim ownership.",
+      });
+    }
+  }
 
   return (
-    <main className="relative z-[2] min-h-screen px-4 py-10">
-      <div className="mx-auto flex w-full max-w-5xl flex-col gap-8">
-        <header className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.3em] text-primary/70">
-              Owner workspace
-            </p>
-            <h1 className="glow-text mt-1 text-3xl font-bold tracking-tight">
-              Welcome{user?.name ? `, ${user.name}` : ""}
-            </h1>
-          </div>
-          <div className="flex flex-wrap gap-2">
-            <Button
-              asChild
-              variant="outline"
-              className="border-primary/30 hover:bg-primary/10 hover:text-primary"
-            >
-              <Link to="/">
-                <Globe className="size-4" />
-                View site
-              </Link>
-            </Button>
-            <Button
-              type="button"
-              variant="outline"
-              className="border-primary/30 hover:bg-primary/10 hover:text-primary"
-              onClick={handleSignOut}
-            >
-              <LogOut className="size-4" />
-              Sign out
-            </Button>
-          </div>
-        </header>
-
-        {/* Quick toggles */}
-        <div className="grid gap-4 sm:grid-cols-3">
-          <Card className="border-primary/25 bg-card/60 backdrop-blur-md">
-            <CardHeader className="pb-2">
-              <div className="flex items-center gap-3">
-                <div className="flex size-10 items-center justify-center rounded-lg bg-primary/10 text-primary ring-glow">
-                  <Snowflake className="size-5" />
-                </div>
-                <CardTitle className="text-base">Snow droplets</CardTitle>
-              </div>
-            </CardHeader>
-            <CardContent className="text-sm text-muted-foreground">
-              <p className="min-h-5">
-                {state.snow ? "Falling over the whole site." : "Currently switched off."}
-              </p>
-              <Button
-                size="sm"
-                variant="outline"
-                className="mt-3 border-primary/30 hover:bg-primary/10 hover:text-primary"
-                onClick={() => setState({ snow: !state.snow })}
-              >
-                {state.snow ? "Turn off" : "Turn on"}
-              </Button>
-            </CardContent>
-          </Card>
-
-          <Card className="border-primary/25 bg-card/60 backdrop-blur-md">
-            <CardHeader className="pb-2">
-              <div className="flex items-center gap-3">
-                <div className="flex size-10 items-center justify-center rounded-lg bg-primary/10 text-primary ring-glow">
-                  <Globe className="size-5" />
-                </div>
-                <CardTitle className="text-base">Panic cloak</CardTitle>
-              </div>
-            </CardHeader>
-            <CardContent className="text-sm text-muted-foreground">
-              <p className="min-h-5 truncate">{cloakTarget}</p>
-              <Button
-                size="sm"
-                variant="outline"
-                className="mt-3 border-primary/30 hover:bg-primary/10 hover:text-primary"
-                onClick={() =>
-                  setState({
-                    panicTab: state.panicTab
-                      ? null
-                      : {
-                          label: "Google Classroom",
-                          icon: "📚",
-                          title: "Classes",
-                        },
-                  })
-                }
-              >
-                {state.panicTab ? "Uncloak" : "Cloak as Classroom"}
-              </Button>
-            </CardContent>
-          </Card>
-
-          <Card className="border-primary/25 bg-card/60 backdrop-blur-md">
-            <CardHeader className="pb-2">
-              <div className="flex items-center gap-3">
-                <div className="flex size-10 items-center justify-center rounded-lg bg-primary/10 text-primary ring-glow">
-                  <Terminal className="size-5" />
-                </div>
-                <CardTitle className="text-base">Dev console</CardTitle>
-              </div>
-            </CardHeader>
-            <CardContent className="text-sm text-muted-foreground">
-              <p className="min-h-5">Summon with Ctrl + `</p>
-              <Button
-                size="sm"
-                variant="outline"
-                className="mt-3 border-primary/30 hover:bg-primary/10 hover:text-primary"
-                onClick={() => setState({ ownerMode: true, devConsoleOpen: true })}
-              >
-                Open console
-              </Button>
-            </CardContent>
-          </Card>
+    <PageShell wide>
+      <header className="flex flex-wrap items-end justify-between gap-4">
+        <div>
+          <Eyebrow>Your dashboard</Eyebrow>
+          <h1 className="mt-1.5 text-3xl font-semibold tracking-tight">
+            Welcome back{user?.name ? `, ${user.name}` : ""}
+          </h1>
+          <p className="mt-2 text-sm text-muted-foreground">
+            {user?.email ?? "Signed in"} · joined{" "}
+            {user?._creationTime
+              ? formatDistanceToNow(new Date(user._creationTime), {
+                  addSuffix: true,
+                })
+              : "recently"}
+            {status?.isAdmin ? " · owner" : ""}
+          </p>
         </div>
+        <div className="flex flex-wrap gap-2">
+          <Button asChild variant="outline" size="sm">
+            <Link to="/games">
+              <Gamepad2 className="size-4" />
+              Browse games
+            </Link>
+          </Button>
+          <Button asChild variant="outline" size="sm">
+            <Link to="/community">
+              <MessageSquare className="size-4" />
+              Open lounge
+            </Link>
+          </Button>
+        </div>
+      </header>
 
-        {/* Dev command reference */}
-        <Card className="border-primary/25 bg-card/60 backdrop-blur-md">
-          <CardHeader>
-            <div className="flex items-center gap-3">
-              <div className="flex size-10 items-center justify-center rounded-lg bg-primary/10 text-primary ring-glow">
-                <Command className="size-5" />
-              </div>
-              <div>
-                <CardTitle>Developer commands</CardTitle>
-                <p className="mt-1 text-sm text-muted-foreground">
-                  Every command works in the bottom-left console.
-                </p>
-              </div>
-            </div>
-          </CardHeader>
-          <CardContent className="text-sm">
-            <div className="overflow-x-auto rounded-lg border border-primary/20">
-              <table className="w-full text-left text-xs sm:text-sm">
-                <thead className="bg-primary/10 text-primary">
-                  <tr>
-                    <th className="px-3 py-2 font-semibold">Command</th>
-                    <th className="px-3 py-2 font-semibold">What it does</th>
-                    <th className="px-3 py-2 font-semibold">Example</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-primary/15">
-                  {DEV_COMMANDS.map((spec) => (
-                    <tr key={spec.cmd} className="text-foreground/85">
-                      <td className="whitespace-nowrap px-3 py-2 font-mono text-primary">
-                        {spec.cmd}
-                        {spec.args ? ` ${spec.args}` : ""}
-                      </td>
-                      <td className="px-3 py-2 text-muted-foreground">{spec.desc}</td>
-                      <td className="whitespace-nowrap px-3 py-2 font-mono text-foreground/70">
-                        {spec.usage}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </CardContent>
-        </Card>
+      {notice && (
+        <p
+          className={
+            notice.tone === "ok"
+              ? "mt-4 text-sm text-primary"
+              : "mt-4 text-sm text-destructive"
+          }
+        >
+          {notice.text}
+        </p>
+      )}
 
-        {/* What's live in v1 */}
-        <Card className="border-primary/25 bg-card/60 backdrop-blur-md">
+      <dl className="mt-6 grid gap-4 sm:grid-cols-3">
+        {[
+          ["Messages", posts.length, "posted in the lounge"],
+          ["Comments", comments.length, "left on games"],
+          ["Saved", (mine ?? []).length, "total posts and replies"],
+        ].map(([label, value, detail]) => (
+          <div
+            key={label as string}
+            className="rounded-xl border border-border/70 bg-card/60 px-5 py-4"
+          >
+            <dt className="text-sm text-muted-foreground">{label as string}</dt>
+            <dd className="mt-1 text-2xl font-semibold">{value as number}</dd>
+            <dd className="mt-0.5 text-xs text-muted-foreground">
+              {detail as string}
+            </dd>
+          </div>
+        ))}
+      </dl>
+
+      <div className="mt-6 grid gap-4 lg:grid-cols-[1.3fr_1fr]">
+        <Card className="border-border/70 bg-card/60">
           <CardHeader>
-            <div className="flex items-center gap-3">
-              <div className="flex size-10 items-center justify-center rounded-lg bg-primary/10 text-primary ring-glow">
-                <Gamepad2 className="size-5" />
-              </div>
-              <div>
-                <CardTitle>Version 1 — what&apos;s live</CardTitle>
-                <p className="mt-1 text-sm text-muted-foreground">
-                  Exactly the scope that was asked for — nothing more.
-                </p>
-              </div>
-            </div>
+            <CardTitle className="text-base">Your activity</CardTitle>
           </CardHeader>
           <CardContent>
-            <ul className="grid gap-3 text-sm sm:grid-cols-2">
-              <li className="rounded-lg border border-primary/20 bg-primary/5 px-3 py-2.5">
-                <span className="flex items-center gap-2 font-medium">
-                  <Gamepad2 className="size-4 text-primary" /> Footer 1 — Games
-                </span>
-                <span className="mt-1 block text-muted-foreground">
-                  Friday Night Funkin&apos; playable on the page.
-                </span>
-              </li>
-              <li className="rounded-lg border border-primary/20 bg-primary/5 px-3 py-2.5">
-                <span className="flex items-center gap-2 font-medium">
-                  <Globe className="size-4 text-primary" /> Footer 2 — Proxy
-                </span>
-                <span className="mt-1 block text-muted-foreground">
-                  Brave search in a clean new tab, untracked.
-                </span>
-              </li>
-              <li className="rounded-lg border border-primary/20 bg-primary/5 px-3 py-2.5">
-                <span className="flex items-center gap-2 font-medium">
-                  <Terminal className="size-4 text-primary" /> Developer cmds
-                </span>
-                <span className="mt-1 block text-muted-foreground">
-                  Bottom-left console: snow, cloak, status, clear, exit.
-                </span>
-              </li>
-              <li className="rounded-lg border border-primary/20 bg-primary/5 px-3 py-2.5">
-                <span className="flex items-center gap-2 font-medium">
-                  <Snowflake className="size-4 text-primary" /> Purple glow + snow
-                </span>
-                <span className="mt-1 block text-muted-foreground">
-                  Canvas snowfall across every screen.
-                </span>
-              </li>
-            </ul>
+            {mine === undefined ? (
+              <p className="text-sm text-muted-foreground">Loading…</p>
+            ) : mine.length === 0 ? (
+              <p className="text-sm text-muted-foreground">
+                You haven&apos;t posted anything yet. Head to the lounge and
+                start a thread.
+              </p>
+            ) : (
+              <ul className="divide-y divide-border/70">
+                {mine.slice(0, 8).map((message) => (
+                  <li key={message._id} className="py-3 first:pt-0">
+                    <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                      <span>
+                        {message.parentId ? "Comment" : "Message"} ·{" "}
+                        {timeAgoText(message.createdAt)}
+                      </span>
+                      {message.scope === "game" && message.gameSlug && (
+                        <Link
+                          to={`/games/${message.gameSlug}`}
+                          className="text-primary hover:underline"
+                        >
+                          {message.gameSlug}
+                        </Link>
+                      )}
+                    </div>
+                    <p className="mt-1 line-clamp-2 text-sm">{message.body}</p>
+                  </li>
+                ))}
+              </ul>
+            )}
           </CardContent>
         </Card>
+
+        <div className="space-y-4">
+          <Card className="border-border/70 bg-card/60">
+            <CardHeader>
+              <CardTitle className="text-base">Profile</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <p className="text-sm text-muted-foreground">
+                The name that appears next to your messages.
+              </p>
+              <Input
+                value={name}
+                onChange={(event) => setName(event.target.value)}
+                placeholder={user?.name ?? "Display name"}
+                maxLength={40}
+              />
+              <Button
+                size="sm"
+                onClick={handleRename}
+                disabled={!name.trim()}
+                className="w-full"
+              >
+                Save display name
+              </Button>
+            </CardContent>
+          </Card>
+
+          <Card className="border-border/70 bg-card/60">
+            <CardHeader>
+              <CardTitle className="text-base">Owner controls</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3 text-sm text-muted-foreground">
+              <p className="flex items-center gap-2">
+                <Terminal className="size-4 shrink-0" />
+                Developer console lives bottom-left — summon it with Ctrl + `.
+              </p>
+              {status?.isAdmin ? (
+                <>
+                  <p className="flex items-center gap-2 text-primary">
+                    <Shield className="size-4" />
+                    You have owner access.
+                  </p>
+                  <Button asChild size="sm" variant="outline" className="w-full">
+                    <Link to="/admin">
+                      <Crown className="size-4" />
+                      Open the admin area
+                    </Link>
+                  </Button>
+                </>
+              ) : status && !status.hasAdmin ? (
+                <>
+                  <p className="flex items-start gap-2">
+                    <Crown className="mt-0.5 size-4 shrink-0 text-primary" />
+                    No owner exists yet. If this is your site, claim the seat —
+                    it unlocks the admin area and shows your Admin link.
+                  </p>
+                  <Button size="sm" className="w-full" onClick={handleClaim}>
+                    <Crown className="size-4" />
+                    Claim owner access
+                  </Button>
+                </>
+              ) : (
+                <p className="flex items-center gap-2">
+                  <Users className="size-4" />
+                  Ask the owner for admin access if you need it.
+                </p>
+              )}
+            </CardContent>
+          </Card>
+
+          <div className="grid gap-3 sm:grid-cols-2">
+            <Button asChild variant="outline" size="sm" className="justify-start">
+              <Link to="/proxy">
+                <Search className="size-4" />
+                Search proxy
+              </Link>
+            </Button>
+            <Button asChild variant="outline" size="sm" className="justify-start">
+              <Link to="/games">
+                <Sparkles className="size-4" />
+                What&apos;s new
+              </Link>
+            </Button>
+          </div>
+        </div>
       </div>
-    </main>
+    </PageShell>
   );
+}
+
+function timeAgoText(timestamp: number) {
+  try {
+    return formatDistanceToNow(new Date(timestamp), { addSuffix: true });
+  } catch {
+    return "just now";
+  }
 }

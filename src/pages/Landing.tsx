@@ -1,204 +1,253 @@
-import { motion } from "framer-motion";
-import { GameCard } from "@/components/GameCard";
-import { ProxyCard } from "@/components/ProxyCard";
-import { CloakMenu, SnowToggle } from "@/components/SiteChrome";
-import { Button } from "@/components/ui/button";
-import { SITE_NAME } from "@/lib/site";
-import { useAuth } from "@/hooks/use-auth";
-import { Gamepad2, LayoutDashboard, Sparkles } from "lucide-react";
 import { Link } from "react-router";
+import { useQuery } from "convex/react";
+import { formatDistanceToNow } from "date-fns";
+import { api } from "@/convex/_generated/api";
+import { PageShell } from "@/components/Layout";
+import { GameGrid } from "@/components/GameGrid";
+import { ProxyPanel } from "@/components/ProxyPanel";
+import { Eyebrow } from "@/components/SiteChrome";
+import { Button } from "@/components/ui/button";
+import { useCatalog } from "@/hooks/use-catalog";
+import { useAuth } from "@/hooks/use-auth";
+import { SITE_TAGLINE } from "@/lib/site";
+import {
+  ArrowRight,
+  Blocks,
+  MessageSquare,
+  Search,
+  Sparkles,
+  Terminal,
+  Users,
+} from "lucide-react";
 
-const fadeUp = {
-  initial: { opacity: 0, y: 18 },
-  animate: { opacity: 1, y: 0 },
-};
+function SectionHeader({
+  eyebrow,
+  title,
+  description,
+  to,
+  linkLabel,
+}: {
+  eyebrow: string;
+  title: string;
+  description: string;
+  to?: string;
+  linkLabel?: string;
+}) {
+  return (
+    <div className="mb-5 flex flex-wrap items-end justify-between gap-3">
+      <div>
+        <Eyebrow>{eyebrow}</Eyebrow>
+        <h2 className="mt-1.5 text-2xl font-semibold tracking-tight">{title}</h2>
+        <p className="mt-1.5 max-w-2xl text-sm text-muted-foreground">
+          {description}
+        </p>
+      </div>
+      {to && linkLabel && (
+        <Button asChild variant="ghost" size="sm" className="text-primary">
+          <Link to={to}>
+            {linkLabel}
+            <ArrowRight className="size-4" />
+          </Link>
+        </Button>
+      )}
+    </div>
+  );
+}
 
 export default function Landing() {
+  const { games } = useCatalog();
   const { isAuthenticated } = useAuth();
+  const latest = useQuery(api.messages.list, { scope: "community", limit: 3 });
+
+  const featured = games.filter((game) => game.featured).slice(0, 3);
+  const showcase = featured.length > 0 ? featured : games.slice(0, 3);
 
   return (
-    <motion.div
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      transition={{ duration: 0.5 }}
-      className="relative z-[2] min-h-screen"
-    >
-      {/* ---- Top footer ---- */}
-      <header className="sticky top-0 z-40 border-b border-primary/20 bg-[oklch(0.13_0.04_293_/_0.75)] backdrop-blur-xl">
-        <div className="mx-auto flex w-full max-w-5xl items-center gap-3 px-4 py-3">
-          <a href="#top" className="flex items-center gap-2 shrink-0">
-            <span className="flex size-9 items-center justify-center rounded-xl bg-primary/15 ring-glow">
-              <Sparkles className="size-5 text-primary" />
-            </span>
-            <span className="hidden font-bold tracking-tight sm:block">
-              {SITE_NAME}
-            </span>
-          </a>
+    <PageShell wide>
+      {/* Hero */}
+      <section className="py-6 sm:py-12">
+        <Eyebrow>Hosted arcade · private search · community</Eyebrow>
+        <h1 className="mt-3 max-w-3xl text-4xl font-semibold leading-[1.1] tracking-tight sm:text-5xl">
+          Games, search and your people — in one clean tab.
+        </h1>
+        <p className="mt-4 max-w-2xl text-base text-muted-foreground sm:text-lg">
+          {SITE_TAGLINE} Dex:Active is a hosted website: a playable games
+          catalog, a Brave-powered search proxy, and a members&apos; lounge
+          where everyone can post and reply.
+        </p>
 
-          {/* Footer 1: Games · Footer 2: Proxy */}
-          <nav className="ml-2 flex items-center gap-2">
-            <a
-              href="#games"
-              className="group flex items-center gap-2 rounded-full border border-primary/25 bg-primary/5 px-3.5 py-1.5 text-sm font-medium text-foreground/85 transition hover:border-primary/50 hover:bg-primary/15 hover:text-primary"
-            >
-              <span className="text-[10px] font-bold text-primary/60">1</span>
-              Games
-              <Gamepad2 className="size-3.5 text-primary/70 transition group-hover:text-primary" />
-            </a>
-            <a
-              href="#proxy"
-              className="group flex items-center gap-2 rounded-full border border-primary/25 bg-primary/5 px-3.5 py-1.5 text-sm font-medium text-foreground/85 transition hover:border-primary/50 hover:bg-primary/15 hover:text-primary"
-            >
-              <span className="text-[10px] font-bold text-primary/60">2</span>
-              Proxy
-            </a>
-          </nav>
-
-          <div className="ml-auto flex items-center gap-2">
-            <SnowToggle />
-            <CloakMenu />
-            {isAuthenticated ? (
-              <Button asChild size="sm" variant="ghost" className="text-primary hover:text-primary">
-                <Link to="/dashboard">
-                  <LayoutDashboard className="size-4" />
-                  <span className="hidden sm:inline">Owner</span>
-                </Link>
-              </Button>
-            ) : (
-              <Button asChild size="sm" className="glow-sm">
-                <Link to="/auth">Sign in</Link>
-              </Button>
-            )}
-          </div>
-        </div>
-      </header>
-
-      {/* ---- Hero ---- */}
-      <section id="top" className="mx-auto w-full max-w-5xl px-4 pb-10 pt-16 sm:pt-24">
-        <div className="relative text-center">
-          <div
-            aria-hidden
-            className="animate-glow-pulse pointer-events-none absolute left-1/2 top-1/2 -z-10 size-[34rem] -translate-x-1/2 -translate-y-1/2 rounded-full bg-primary/25 blur-[110px]"
-          />
-          <motion.p
-            {...fadeUp}
-            transition={{ duration: 0.5 }}
-            className="inline-flex items-center gap-2 rounded-full border border-primary/30 bg-primary/10 px-4 py-1.5 text-xs font-medium text-primary"
-          >
-            <Sparkles className="size-3.5" />
-            unblocked · built for the community
-          </motion.p>
-          <motion.h1
-            {...fadeUp}
-            transition={{ duration: 0.55, delay: 0.08 }}
-            className="glow-text mx-auto mt-6 max-w-3xl text-balance text-4xl font-extrabold leading-[1.05] tracking-tight sm:text-6xl"
-          >
-            The arcade that slips past the firewall
-          </motion.h1>
-          <motion.p
-            {...fadeUp}
-            transition={{ duration: 0.55, delay: 0.16 }}
-            className="mx-auto mt-5 max-w-xl text-balance text-base text-muted-foreground sm:text-lg"
-          >
-            {SITE_NAME} wraps Friday Night Funkin&apos; and a private Brave
-            search proxy in one glowing, snow-dusted tab that looks like
-            homework if anyone walks by.
-          </motion.p>
-          <motion.div
-            {...fadeUp}
-            transition={{ duration: 0.55, delay: 0.24 }}
-            className="mt-8 flex flex-wrap items-center justify-center gap-3"
-          >
-            <Button asChild size="lg" className="glow-md h-12 px-7 text-base">
-              <a href="#games">
-                <Gamepad2 className="size-5" />
-                Start playing
-              </a>
+        <div className="mt-7 flex flex-wrap gap-3">
+          <Button asChild size="lg" className="h-11 px-6">
+            <Link to="/games">
+              Browse the catalog
+              <ArrowRight className="size-4" />
+            </Link>
+          </Button>
+          <Button asChild size="lg" variant="outline" className="h-11 px-6">
+            <Link to="/proxy">
+              <Search className="size-4" />
+              Open the proxy
+            </Link>
+          </Button>
+          {!isAuthenticated && (
+            <Button asChild size="lg" variant="ghost" className="h-11 px-6 text-primary">
+              <Link to="/auth?mode=signup">Create an account</Link>
             </Button>
-            <Button
-              asChild
-              size="lg"
-              variant="outline"
-              className="h-12 border-primary/35 bg-card/40 px-7 text-base backdrop-blur-md hover:bg-primary/10 hover:text-primary"
-            >
-              <a href="#proxy">Open the proxy</a>
-            </Button>
-          </motion.div>
+          )}
         </div>
 
-        {/* stat strip */}
-        <motion.div
-          {...fadeUp}
-          transition={{ duration: 0.55, delay: 0.32 }}
-          className="mx-auto mt-12 grid max-w-2xl grid-cols-3 gap-px overflow-hidden rounded-2xl border border-primary/20 bg-primary/15 text-center backdrop-blur-md"
-        >
+        <dl className="mt-10 grid gap-px overflow-hidden rounded-xl border border-border/70 bg-border/70 text-sm sm:grid-cols-3">
           {[
-            ["100%", "free to play"],
-            ["0", "downloads needed"],
-            ["Esc", "panic cloak"],
-          ].map(([big, small]) => (
-            <div key={small} className="bg-[oklch(0.13_0.04_293_/_0.72)] px-3 py-4">
-              <p className="glow-text text-lg font-bold text-primary sm:text-2xl">{big}</p>
-              <p className="mt-0.5 text-[11px] text-muted-foreground sm:text-xs">{small}</p>
+            [`${games.length} games`, "Ready to play, no downloads"],
+            ["1 search box", "Brave results in a private tab"],
+            ["Members only", "Sign up to post and comment"],
+          ].map(([title, detail]) => (
+            <div key={title} className="bg-card/70 px-5 py-4">
+              <dt className="font-medium">{title}</dt>
+              <dd className="mt-0.5 text-muted-foreground">{detail}</dd>
             </div>
           ))}
-        </motion.div>
+        </dl>
       </section>
 
-      {/* ---- Sections ---- */}
-      <main className="mx-auto w-full max-w-5xl space-y-14 px-4 pb-16 pt-6">
-        <GameCard />
-        <ProxyCard />
-      </main>
+      {/* Games */}
+      <section className="mt-16">
+        <SectionHeader
+          eyebrow="The catalog"
+          title="Start with these"
+          description="Every game plays right here in the page. Search the full catalog by name, category or tag whenever you want more."
+          to="/games"
+          linkLabel="See all games"
+        />
+        <GameGrid games={showcase} />
+      </section>
 
-      {/* ---- Bottom footer: dev cmds on the left ---- */}
-      <footer className="border-t border-primary/20 bg-[oklch(0.13_0.04_293_/_0.8)] backdrop-blur-xl">
-        <div className="mx-auto grid w-full max-w-5xl gap-8 px-4 py-8 sm:grid-cols-[1fr_auto]">
-          <div className="min-w-0">
-            <p className="text-xs font-semibold uppercase tracking-[0.3em] text-primary/70">
-              Developer cmds
-            </p>
-            <div className="mt-3 flex flex-wrap gap-2">
-              {[
-                ["snow on|off", "toggle the droplets"],
-                ["cloak <preset>", "disguise the tab"],
-                ["status", "current settings"],
-                ["clear", "wipe the console"],
-                ["exit", "close console"],
-              ].map(([cmd, desc]) => (
-                <span
-                  key={cmd}
-                  className="inline-flex items-center gap-2 rounded-lg border border-primary/25 bg-primary/5 px-2.5 py-1.5 text-xs"
-                >
-                  <code className="font-mono text-primary">{cmd}</code>
-                  <span className="text-muted-foreground">— {desc}</span>
-                </span>
-              ))}
-            </div>
-            <p className="mt-3 text-xs text-muted-foreground">
-              Console lives bottom-left · summon with{" "}
-              <kbd className="rounded border border-primary/30 bg-primary/10 px-1.5 py-0.5 font-mono text-[10px] text-primary">
-                Ctrl + `
-              </kbd>{" "}
-              · type <code className="font-mono text-primary">help</code>
-            </p>
+      {/* Proxy */}
+      <section className="mt-16">
+        <SectionHeader
+          eyebrow="The proxy"
+          title="Search without the runaround"
+          description="Type a question and Dex:Active hands it to Brave Search in a brand-new tab, so nothing on this site sees your results."
+          to="/proxy"
+          linkLabel="Open the proxy"
+        />
+        <ProxyPanel compact />
+      </section>
+
+      {/* Community */}
+      <section className="mt-16">
+        <SectionHeader
+          eyebrow="The lounge"
+          title="What the community is saying"
+          description="Members post messages, reply in threads, and leave comments on individual games."
+          to="/community"
+          linkLabel="Join the conversation"
+        />
+
+        {latest === undefined ? (
+          <div className="rounded-xl border border-dashed border-border/70 px-6 py-10 text-center text-sm text-muted-foreground">
+            Loading the latest messages…
           </div>
+        ) : latest.length === 0 ? (
+          <div className="rounded-xl border border-dashed border-border/70 px-6 py-10 text-center text-sm text-muted-foreground">
+            The lounge is quiet. Create an account and post the first message.
+          </div>
+        ) : (
+          <ul className="grid gap-4 sm:grid-cols-3">
+            {latest.map((message) => (
+              <li
+                key={message._id}
+                className="rounded-xl border border-border/70 bg-card/60 p-5"
+              >
+                <div className="flex items-center gap-2">
+                  <span className="flex size-7 items-center justify-center rounded-full border border-border/70 bg-muted text-[11px] font-medium uppercase text-muted-foreground">
+                    {message.authorName.slice(0, 2)}
+                  </span>
+                  <span className="text-sm font-medium">
+                    {message.authorName}
+                  </span>
+                  <span className="ml-auto text-xs text-muted-foreground">
+                    {formatDistanceToNow(new Date(message.createdAt), {
+                      addSuffix: true,
+                    })}
+                  </span>
+                </div>
+                <p className="mt-3 line-clamp-4 text-sm text-muted-foreground">
+                  {message.body}
+                </p>
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
 
-          <div className="text-sm text-muted-foreground sm:text-right">
-            <p className="font-semibold text-foreground/90">{SITE_NAME}</p>
-            <p className="mt-1">
-              {new Date().getFullYear()} · made for the community, by the owner
-            </p>
-            <p className="mt-2 text-xs">
-              Press{" "}
-              <kbd className="rounded border border-primary/30 bg-primary/10 px-1.5 py-0.5 font-mono text-[10px] text-primary">
-                Esc
-              </kbd>{" "}
-              anytime for the panic cloak
-            </p>
+      {/* What you get / owner */}
+      <section className="mt-16 grid gap-4 md:grid-cols-2">
+        <div className="rounded-xl border border-border/70 bg-card/60 p-6">
+          <Sparkles className="size-5 text-primary" />
+          <h3 className="mt-3 text-lg font-semibold">
+            One account, everything saved
+          </h3>
+          <p className="mt-2 text-sm text-muted-foreground">
+            Signing up keeps your messages, replies and game comments in one
+            place, and gives you a dashboard to review them.
+          </p>
+          <ul className="mt-4 space-y-2 text-sm text-muted-foreground">
+            {[
+              [Blocks, "A catalog you can search by name, category or tag"],
+              [MessageSquare, "Threaded messages and per-game comments"],
+              [Users, "A dashboard with your own activity"],
+            ].map(([Icon, text]) => {
+              const Item = Icon as typeof Blocks;
+              return (
+                <li key={text as string} className="flex items-start gap-2.5">
+                  <Item className="mt-0.5 size-4 shrink-0 text-primary" />
+                  <span>{text as string}</span>
+                </li>
+              );
+            })}
+          </ul>
+          <div className="mt-5 flex gap-2">
+            <Button asChild size="sm">
+              <Link to={isAuthenticated ? "/dashboard" : "/auth?mode=signup"}>
+                {isAuthenticated ? "Open dashboard" : "Sign up free"}
+              </Link>
+            </Button>
           </div>
         </div>
-      </footer>
-    </motion.div>
+
+        <div className="rounded-xl border border-border/70 bg-card/60 p-6">
+          <Terminal className="size-5 text-primary" />
+          <h3 className="mt-3 text-lg font-semibold">Owner tools</h3>
+          <p className="mt-2 text-sm text-muted-foreground">
+            You keep the keys: an admin area for the catalog, messages and
+            members, plus a developer console pinned to the bottom-left of every
+            page.
+          </p>
+          <ul className="mt-4 space-y-2 text-sm">
+            <li className="flex gap-2">
+              <code className="shrink-0 text-primary">snow on|off</code>
+              <span className="text-muted-foreground">toggle the droplets</span>
+            </li>
+            <li className="flex gap-2">
+              <code className="shrink-0 text-primary">cloak &lt;preset&gt;</code>
+              <span className="text-muted-foreground">disguise the tab</span>
+            </li>
+            <li className="flex gap-2">
+              <code className="shrink-0 text-primary">status</code>
+              <span className="text-muted-foreground">current settings</span>
+            </li>
+          </ul>
+          <div className="mt-5 flex flex-wrap gap-2">
+            <Button asChild size="sm" variant="outline">
+              <Link to="/admin">Open admin area</Link>
+            </Button>
+            <Button asChild size="sm" variant="ghost" className="text-muted-foreground">
+              <Link to="/community">Visit the lounge</Link>
+            </Button>
+          </div>
+        </div>
+      </section>
+    </PageShell>
   );
 }

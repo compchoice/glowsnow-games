@@ -49,7 +49,7 @@ export function Snowfall({ enabled }: { enabled: boolean }) {
         r,
         speed: rand(0.35, 1.1) * (0.6 + r / 4),
         drift: rand(-0.35, 0.35),
-        opacity: rand(0.25, 0.85),
+        opacity: rand(0.12, 0.45),
         phase: rand(0, Math.PI * 2),
       };
     }
@@ -63,8 +63,8 @@ export function Snowfall({ enabled }: { enabled: boolean }) {
       canvas!.style.width = `${width}px`;
       canvas!.style.height = `${height}px`;
       ctx!.setTransform(dpr, 0, 0, dpr, 0, 0);
-      const density = Math.min(Math.round((width * height) / 14000), 140);
-      const count = Math.max(50, density);
+      const density = Math.min(Math.round((width * height) / 26000), 80);
+      const count = Math.max(30, density);
       droplets = Array.from({ length: count }, () => makeDroplet(true));
     }
 
@@ -143,7 +143,7 @@ export function Snowfall({ enabled }: { enabled: boolean }) {
     <canvas
       ref={canvasRef}
       aria-hidden
-      className="pointer-events-none fixed inset-0 z-[1]"
+      className="pointer-events-none fixed inset-0 z-[1] opacity-70"
     />
   );
 }

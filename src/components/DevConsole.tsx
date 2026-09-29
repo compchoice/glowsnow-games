@@ -1,50 +1,21 @@
 import { useEffect, useRef, useState } from "react";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { devStore, useDevTools } from "@/lib/dev-store";
-import { SITE_NAME, TAB_PRESETS, emojiFavicon } from "@/lib/site";
+import { setCloak } from "@/components/SiteChrome";
+import { SITE_NAME, TAB_PRESETS } from "@/lib/site";
 import { Terminal, X } from "lucide-react";
 
-type CommandSpec = {
+export type CommandSpec = {
   cmd: string;
   args?: string;
   desc: string;
-  usage: string;
 };
 
 export const DEV_COMMANDS: CommandSpec[] = [
-  {
-    cmd: "help",
-    desc: "show every developer command",
-    usage: "help",
-  },
-  {
-    cmd: "snow",
-    args: "on|off",
-    desc: "toggle the purple snow droplets",
-    usage: "snow on",
-  },
-  {
-    cmd: "cloak",
-    args: "preset|off",
-    desc: "disguise the tab as schoolwork (panic cloak)",
-    usage: "cloak google classroom",
-  },
-  {
-    cmd: "status",
-    desc: "show current dev settings",
-    usage: "status",
-  },
-  {
-    cmd: "clear",
-    desc: "clear this console",
-    usage: "clear",
-  },
-  {
-    cmd: "exit",
-    desc: "close the console",
-    usage: "exit",
-  },
+  { cmd: "snow", args: "on | off", desc: "turn the droplets on or off" },
+  { cmd: "cloak", args: "preset | off", desc: "disguise the tab as schoolwork" },
+  { cmd: "status", desc: "show what the console is set to right now" },
+  { cmd: "clear", desc: "wipe the console output" },
+  { cmd: "exit", desc: "close the console" },
 ];
 
 type Line = { kind: "input" | "output" | "error" | "clear"; text: string };
@@ -63,26 +34,6 @@ const CLOAK_ALIASES: Record<string, number> = {
   "khan academy": 5,
 };
 
-function setPanicTab(preset: (typeof TAB_PRESETS)[number] | null) {
-  devStore.set({ panicTab: preset });
-  if (preset) {
-    document.title = preset.title;
-    let link = document.querySelector<HTMLLinkElement>(
-      "link[rel='icon']",
-    );
-    if (!link) {
-      link = document.createElement("link");
-      link.rel = "icon";
-      document.head.appendChild(link);
-    }
-    link.href = emojiFavicon(preset.icon);
-  } else {
-    document.title = `${SITE_NAME} — Play Free, Unblocked`;
-    const link = document.querySelector<HTMLLinkElement>("link[rel='icon']");
-    if (link) link.href = "/logo.svg";
-  }
-}
-
 function runCommand(raw: string, println: (line: Line) => void) {
   const input = raw.trim();
   if (!input) return;
@@ -95,42 +46,40 @@ function runCommand(raw: string, println: (line: Line) => void) {
     case "help":
       println({ kind: "output", text: "Developer commands:" });
       for (const spec of DEV_COMMANDS) {
-        const args = spec.args ? ` ${spec.args}` : "";
-        println({ kind: "output", text: `  ${spec.cmd}${args} — ${spec.desc}` });
+        println({
+          kind: "output",
+          text: `  ${spec.cmd}${spec.args ? ` ${spec.args}` : ""} — ${spec.desc}`,
+        });
       }
       break;
 
-    case "snow": {
+    case "snow":
       if (arg === "on" || arg === "off") {
         devStore.set({ snow: arg === "on" });
         println({ kind: "output", text: `Snow droplets ${arg}.` });
       } else {
-        println({ kind: "error", text: "Usage: snow on|off" });
+        println({ kind: "error", text: "Usage: snow on | snow off" });
       }
       break;
-    }
 
     case "cloak": {
       if (arg === "off" || arg === "none") {
-        setPanicTab(null);
-        println({ kind: "output", text: "Panic cloak off. Real title restored." });
+        setCloak(null);
+        println({ kind: "output", text: "Disguise removed." });
       } else if (arg) {
-        const idx = CLOAK_ALIASES[arg];
-        if (idx === undefined) {
+        const index = CLOAK_ALIASES[arg];
+        if (index === undefined) {
           println({
             kind: "error",
-            text: `Unknown preset "${arg}". Try: ${TAB_PRESETS.map((p) => p.label.toLowerCase()).join(", ")}, or off.`,
+            text: `Unknown preset. Try: ${TAB_PRESETS.map((p) => p.label.toLowerCase()).join(", ")}, or off.`,
           });
         } else {
-          const preset = TAB_PRESETS[idx];
-          setPanicTab(preset);
-          println({
-            kind: "output",
-            text: `Tab cloaked as "${preset.title}" ${preset.icon}`,
-          });
+          const preset = TAB_PRESETS[index];
+          setCloak(preset);
+          println({ kind: "output", text: `Tab disguised as ${preset.label}.` });
         }
       } else {
-        println({ kind: "error", text: "Usage: cloak <preset|off>" });
+        println({ kind: "error", text: "Usage: cloak <preset> | cloak off" });
       }
       break;
     }
@@ -139,7 +88,7 @@ function runCommand(raw: string, println: (line: Line) => void) {
       const state = devStore.get();
       println({
         kind: "output",
-        text: `snow=${state.snow ? "on" : "off"} · cloak=${state.panicTab ? state.panicTab.label : "off"} · site=${SITE_NAME}`,
+        text: `site=${SITE_NAME} · snow=${state.snow ? "on" : "off"} · disguise=${state.panicTab ? state.panicTab.label : "off"}`,
       });
       break;
     }
@@ -149,24 +98,30 @@ function runCommand(raw: string, println: (line: Line) => void) {
       break;
 
     case "exit":
-      println({ kind: "output", text: "Bye, dev." });
+      println({ kind: "output", text: "Closing the console." });
       devStore.set({ devConsoleOpen: false });
       break;
 
     default:
-      println({ kind: "error", text: `Unknown command: ${cmd}. Type "help".` });
+      println({
+        kind: "error",
+        text: `Unknown command: ${cmd}. Type help for the list.`,
+      });
   }
 }
 
+/**
+ * The owner's developer console, pinned to the bottom-left of every page.
+ * Summon it with the terminal button or Ctrl + `.
+ */
 export function DevConsole() {
   const [state, setState] = useDevTools();
   const [lines, setLines] = useState<Line[]>([
-    { kind: "output", text: `${SITE_NAME} dev console. Type "help" for commands.` },
+    { kind: "output", text: `${SITE_NAME} developer console. Type help to begin.` },
   ]);
   const [value, setValue] = useState("");
   const [history, setHistory] = useState<string[]>([]);
-  const [historyIdx, setHistoryIdx] = useState<number | null>(null);
-  const [hintDismissed, setHintDismissed] = useState(false);
+  const [historyIndex, setHistoryIndex] = useState<number | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -182,11 +137,10 @@ export function DevConsole() {
     if (open) inputRef.current?.focus();
   }, [open]);
 
-  // Owner-only summon: Ctrl + ` (backtick)
   useEffect(() => {
-    function onKey(e: KeyboardEvent) {
-      if (e.ctrlKey && e.key === "`") {
-        e.preventDefault();
+    function onKey(event: KeyboardEvent) {
+      if (event.ctrlKey && event.key === "`") {
+        event.preventDefault();
         setState({ devConsoleOpen: !devStore.get().devConsoleOpen });
       }
     }
@@ -199,51 +153,38 @@ export function DevConsole() {
       setLines([]);
       return;
     }
-    setLines((prev) => [...prev.slice(-80), line]);
+    setLines((previous) => [...previous.slice(-80), line]);
   }
 
-  function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
+  function handleSubmit(event: React.FormEvent) {
+    event.preventDefault();
     const raw = value;
     setValue("");
-    setHistory((h) => [...h.slice(-40), raw]);
-    setHistoryIdx(null);
+    setHistory((items) => [...items.slice(-40), raw]);
+    setHistoryIndex(null);
     runCommand(raw, println);
   }
 
-  function handleKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
-    if (e.key === "ArrowUp") {
-      e.preventDefault();
+  function handleKeyDown(event: React.KeyboardEvent<HTMLInputElement>) {
+    if (event.key === "ArrowUp") {
+      event.preventDefault();
       if (history.length === 0) return;
-      const next = historyIdx === null ? history.length - 1 : Math.max(0, historyIdx - 1);
-      setHistoryIdx(next);
+      const next =
+        historyIndex === null ? history.length - 1 : Math.max(0, historyIndex - 1);
+      setHistoryIndex(next);
       setValue(history[next]);
-    } else if (e.key === "ArrowDown") {
-      e.preventDefault();
-      if (historyIdx === null) return;
-      const next = historyIdx + 1;
+    } else if (event.key === "ArrowDown") {
+      event.preventDefault();
+      if (historyIndex === null) return;
+      const next = historyIndex + 1;
       if (next >= history.length) {
-        setHistoryIdx(null);
+        setHistoryIndex(null);
         setValue("");
       } else {
-        setHistoryIdx(next);
+        setHistoryIndex(next);
         setValue(history[next]);
       }
     }
-  }
-
-  if (!state.ownerMode && !open) {
-    return (
-      <button
-        type="button"
-        onClick={() => setState({ ownerMode: true, devConsoleOpen: true })}
-        className="fixed bottom-4 left-4 z-50 flex size-11 items-center justify-center rounded-full bg-card/80 ring-glow text-primary/90 backdrop-blur-md transition hover:text-primary"
-        aria-label="Open developer console"
-        title="Developer console (Ctrl + `)"
-      >
-        <Terminal className="size-5" />
-      </button>
-    );
   }
 
   if (!open) {
@@ -251,89 +192,71 @@ export function DevConsole() {
       <button
         type="button"
         onClick={() => setState({ devConsoleOpen: true })}
-        className="fixed bottom-4 left-4 z-50 flex size-11 items-center justify-center rounded-full bg-card/80 ring-glow text-primary/90 backdrop-blur-md transition hover:text-primary"
-        aria-label="Open developer console"
+        className="fixed bottom-4 left-4 z-50 flex items-center gap-2 rounded-lg border border-border/70 bg-card/85 px-3 py-2 text-xs text-muted-foreground backdrop-blur-md transition-colors hover:border-primary/40 hover:text-foreground"
+        aria-label="Open the developer console"
         title="Developer console (Ctrl + `)"
       >
-        <Terminal className="size-5" />
+        <Terminal className="size-3.5 text-primary" />
+        <span className="hidden sm:inline">dev console</span>
       </button>
     );
   }
 
   return (
-    <div className="fixed bottom-4 left-4 z-50 flex h-80 w-[min(26rem,calc(100vw-2rem))] flex-col overflow-hidden rounded-xl border border-primary/40 bg-[oklch(0.13_0.04_293_/_0.92)] text-sm shadow-2xl backdrop-blur-xl glow-md">
-      <div className="flex items-center justify-between border-b border-primary/25 bg-primary/10 px-3 py-2">
-        <div className="flex items-center gap-2 text-xs font-semibold tracking-wide text-primary">
-          <Terminal className="size-3.5" />
+    <div className="fixed bottom-4 left-4 z-50 flex h-72 w-[min(24rem,calc(100vw-2rem))] flex-col overflow-hidden rounded-xl border border-border/70 bg-card/95 text-sm backdrop-blur-md">
+      <div className="flex items-center justify-between border-b border-border/70 bg-muted/40 px-3 py-2">
+        <div className="flex items-center gap-2 text-xs font-medium text-muted-foreground">
+          <Terminal className="size-3.5 text-primary" />
           dev console
-          <span className="rounded bg-primary/15 px-1.5 py-0.5 text-[10px] font-medium text-primary/80">
-            owner
-          </span>
         </div>
-        <Button
-          variant="ghost"
-          size="icon-sm"
-          className="text-primary/70 hover:text-primary"
+        <button
+          type="button"
           onClick={() => setState({ devConsoleOpen: false })}
-          aria-label="Close console"
+          className="text-muted-foreground transition-colors hover:text-foreground"
+          aria-label="Close the console"
         >
           <X className="size-4" />
-        </Button>
+        </button>
       </div>
 
-      <div ref={scrollRef} className="flex-1 space-y-1 overflow-y-auto px-3 py-2 font-mono text-xs leading-5">
-        {lines.map((line, i) =>
+      <div
+        ref={scrollRef}
+        className="flex-1 space-y-1 overflow-y-auto px-3 py-2 font-mono text-xs leading-5"
+      >
+        {lines.map((line, index) =>
           line.kind === "input" ? (
-            <p key={i} className="text-primary/90">
-              <span className="text-primary/50">~$ </span>
+            <p key={index} className="text-primary">
+              <span className="text-muted-foreground">$ </span>
               {line.text}
             </p>
           ) : line.kind === "error" ? (
-            <p key={i} className="text-red-300/90">
+            <p key={index} className="text-destructive">
               {line.text}
             </p>
           ) : (
-            <p key={i} className="whitespace-pre-wrap text-foreground/80">
+            <p key={index} className="whitespace-pre-wrap text-foreground/80">
               {line.text}
             </p>
           ),
         )}
-        {lines.length > 0 && lines[lines.length - 1].kind === "output" && (
-          <p className="text-foreground/40">
-            {"\u00A0"}
-            <span className="animate-blink-caret">▍</span>
-          </p>
-        )}
       </div>
 
-      <form onSubmit={handleSubmit} className="flex items-center gap-2 border-t border-primary/25 bg-primary/5 px-3 py-2">
-        <span className="font-mono text-xs text-primary/60">~$</span>
-        <Input
+      <form
+        onSubmit={handleSubmit}
+        className="flex items-center gap-2 border-t border-border/70 px-3 py-2"
+      >
+        <span className="font-mono text-xs text-muted-foreground">$</span>
+        <input
           ref={inputRef}
           value={value}
-          onChange={(e) => setValue(e.target.value)}
+          onChange={(event) => setValue(event.target.value)}
           onKeyDown={handleKeyDown}
-          placeholder='type "help"'
-          className="h-7 border-none bg-transparent px-0 font-mono text-xs shadow-none focus-visible:ring-0"
+          placeholder="type help"
           autoComplete="off"
           spellCheck={false}
+          className="w-full bg-transparent font-mono text-xs text-foreground outline-none placeholder:text-muted-foreground"
         />
       </form>
-
-      {!hintDismissed && (
-        <div className="flex items-center justify-between border-t border-primary/20 px-3 py-1.5 text-[10px] text-muted-foreground">
-          <span>
-            commands: snow · cloak · status · clear · exit — summon with Ctrl + `
-          </span>
-          <button
-            type="button"
-            className="underline decoration-dotted hover:text-primary"
-            onClick={() => setHintDismissed(true)}
-          >
-            hide
-          </button>
-        </div>
-      )}
     </div>
   );
 }

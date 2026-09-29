@@ -1,35 +1,29 @@
-import { motion } from "framer-motion";
-import { Gamepad2 } from "lucide-react";
 import { Link } from "react-router";
+import { PageShell } from "@/components/Layout";
+import { Eyebrow } from "@/components/SiteChrome";
+import { Button } from "@/components/ui/button";
 
 export default function NotFound() {
   return (
-    <motion.div
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      transition={{ duration: 0.5 }}
-      className="relative z-[2] flex min-h-screen flex-col items-center justify-center px-4 text-center"
-    >
-      <div
-        aria-hidden
-        className="animate-glow-pulse pointer-events-none absolute size-[26rem] -z-10 rounded-full bg-primary/20 blur-[100px]"
-      />
-      <p className="glow-text text-7xl font-extrabold tracking-tight text-primary sm:text-8xl">
-        404
-      </p>
-      <h1 className="mt-4 text-xl font-semibold">
-        This page drifted off with the snow
-      </h1>
-      <p className="mt-2 max-w-sm text-sm text-muted-foreground">
-        The path you followed doesn&apos;t exist. Head back to the arcade floor.
-      </p>
-      <Link
-        to="/"
-        className="glow-sm mt-6 inline-flex items-center gap-2 rounded-lg bg-primary px-5 py-2.5 text-sm font-semibold text-primary-foreground transition hover:bg-primary/90"
-      >
-        <Gamepad2 className="size-4" />
-        Back to the arcade
-      </Link>
-    </motion.div>
+    <PageShell>
+      <div className="py-16">
+        <Eyebrow>Error 404</Eyebrow>
+        <h1 className="mt-1.5 text-3xl font-semibold tracking-tight">
+          That page has drifted off
+        </h1>
+        <p className="mt-2 max-w-xl text-sm text-muted-foreground">
+          The link you followed doesn&apos;t exist on Dex:Active. Head back to
+          the arcade, the proxy, or the lounge — they all still work.
+        </p>
+        <div className="mt-6 flex flex-wrap gap-2">
+          <Button asChild>
+            <Link to="/games">Browse games</Link>
+          </Button>
+          <Button asChild variant="outline">
+            <Link to="/">Back home</Link>
+          </Button>
+        </div>
+      </div>
+    </PageShell>
   );
 }

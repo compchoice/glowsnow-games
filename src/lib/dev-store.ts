@@ -1,8 +1,6 @@
 import { useEffect, useState } from "react";
 
 export type DevToolsState = {
-  /** Owner console unlocked (via ?dev=1 or the authed owner workspace) */
-  ownerMode: boolean;
   /** Developer console panel open */
   devConsoleOpen: boolean;
   /** Snow droplets visible */
@@ -13,7 +11,6 @@ export type DevToolsState = {
 
 const STORAGE_KEY = "snowvault:dev";
 const DEFAULT_STATE: DevToolsState = {
-  ownerMode: false,
   devConsoleOpen: false,
   snow: true,
   panicTab: null,
