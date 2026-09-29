@@ -1,11 +1,15 @@
 import { Toaster } from "@/components/ui/sonner";
 import { RequireAuth } from "@/components/RequireAuth";
+import { DevConsole } from "@/components/DevConsole";
+import { SiteEffects } from "@/components/SiteChrome";
 import { VlyToolbar } from "../vly-toolbar-readonly.tsx";
 import { ConvexAuthProvider } from "@convex-dev/auth/react";
 import { ConvexReactClient } from "convex/react";
 import React, { StrictMode, useEffect, lazy, Suspense } from "react";
+import { Snowfall } from "@/components/Snowfall";
 import { createRoot } from "react-dom/client";
 import { BrowserRouter, Route, Routes, useLocation } from "react-router";
+import { useDevTools } from "@/lib/dev-store";
 import "./index.css";
 
 // Lazy load route components for better code splitting
@@ -107,6 +111,12 @@ function RouteSyncer() {
 }
 
 
+/** Mounts the snowfall once, driven by the persisted dev-store toggle. */
+function SnowfallMount() {
+  const [state] = useDevTools();
+  return <Snowfall enabled={state.snow} />;
+}
+
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
     <RootErrorBoundary>
@@ -136,6 +146,9 @@ createRoot(document.getElementById("root")!).render(
           </Suspense>
         </BrowserRouter>
         <Toaster />
+        <SiteEffects />
+        <SnowfallMount />
+        <DevConsole />
       </ConvexAuthProvider>
     </RootErrorBoundary>
   </StrictMode>,
