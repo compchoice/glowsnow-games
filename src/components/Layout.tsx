@@ -92,6 +92,11 @@ export function SiteHeader() {
               {link.label}
             </RouterNavLink>
           ))}
+          {status?.isModerator && (
+            <RouterNavLink to="/staff" className={linkClass}>
+              Staff
+            </RouterNavLink>
+          )}
           {status?.isAdmin && (
             <RouterNavLink to="/admin" className={linkClass}>
               Admin
@@ -163,7 +168,7 @@ export function SiteHeader() {
 
       {menuOpen && (
         <nav className="border-t border-border/70 px-4 py-2 md:hidden">
-          {[...NAV_LINKS, ...(status?.isAdmin ? [{ label: "Admin", to: "/admin" }] : [])].map(
+          {[...NAV_LINKS, ...(status?.isModerator ? [{ label: "Staff", to: "/staff" }] : []), ...(status?.isAdmin ? [{ label: "Admin", to: "/admin" }] : [])].map(
             (link) => (
               <RouterNavLink
                 key={link.to}

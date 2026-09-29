@@ -17,20 +17,17 @@ import { ShieldAlert, ShieldCheck } from "lucide-react";
  */
 export function ModerationPanel() {
   const rows = useQuery(api.moderation.list);
-  const members = useQuery(api.users.list, {});
   const directory = useMemberDirectory();
   const clear = useMutation(api.moderation.clear);
   const ban = useMutation(api.moderation.ban);
   const timeout = useMutation(api.moderation.timeout);
 
-  // users.list allows a null name; the lookup helpers want something printable.
+  // The public directory rather than users.list, which is owner-only: this panel
+  // also renders on the staff desk, where a moderator has to be able to type a
+  // name. It is the same query the avatars already subscribe to, so it is free.
   const people = useMemo(
-    () =>
-      (members ?? []).map((member) => ({
-        _id: member._id as string,
-        name: member.name ?? member.email ?? "Member",
-      })),
-    [members],
+    () => [...directory.values()].map((member) => ({ _id: member._id as string, name: member.name })),
+    [directory],
   );
 
   const [who, setWho] = useState("");

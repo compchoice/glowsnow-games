@@ -13,6 +13,7 @@ export type CommandSpec = {
 export const DEV_COMMANDS: CommandSpec[] = [
   { cmd: "help", desc: "list every command" },
   { cmd: "status", desc: "show what the console is set to right now" },
+  { cmd: "kick", args: "ana 2h", desc: "boot a member for an hour, or longer (mod+)" },
   { cmd: "ban", args: "ana spamming", desc: "permanently remove a member (owner)" },
   { cmd: "timeout", args: "ana 10m", desc: "silence a member for a while (mod+)" },
   { cmd: "mute", args: "ana 2h flooding chat", desc: "same as timeout, with a reason" },

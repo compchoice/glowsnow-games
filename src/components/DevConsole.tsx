@@ -46,6 +46,11 @@ type CommandContext = {
   isModerator: boolean;
   moderation: ModerationRow[] | undefined;
   ban: (args: { userId: Id<"users">; reason?: string }) => Promise<unknown>;
+  kick: (args: {
+    userId: Id<"users">;
+    durationMs?: number;
+    reason?: string;
+  }) => Promise<unknown>;
   timeout: (args: {
     userId: Id<"users">;
     durationMs: number;
@@ -126,8 +131,41 @@ async function runCommand(raw: string, ctx: CommandContext) {
       break;
     }
 
-    case "ban":
     case "kick": {
+      if (!ctx.isModerator) {
+        println({ kind: "error", text: "You need moderator access to do that." });
+        break;
+      }
+      // `kick ana` is the one-hour default; `kick ana 2h` says how long.
+      const durationText = args[1];
+      const member = needMember(args[0]);
+      if (!member) {
+        if (!args[0]) println({ kind: "error", text: "Usage: kick <member> [duration] [reason]" });
+        break;
+      }
+      const ms = durationText ? parseDuration(durationText) : null;
+      if (durationText && ms === null) {
+        println({ kind: "error", text: "Give a duration like 10m, 2h, 1d or 1w." });
+        break;
+      }
+      const reason = args[1] ? args.slice(2).join(" ") : args.slice(1).join(" ");
+      try {
+        const result = (await ctx.kick({
+          userId: member._id as Id<"users">,
+          durationMs: ms ?? undefined,
+          reason: reason || undefined,
+        })) as { label?: string } | null;
+        println({
+          kind: "output",
+          text: `Kicked ${member.name} — back in ${result?.label ?? "an hour"}.`,
+        });
+      } catch (error) {
+        println({ kind: "error", text: describeError(error, "Could not kick that member.") });
+      }
+      break;
+    }
+
+    case "ban": {
       if (!ctx.isAdmin) {
         println({
           kind: "error",
@@ -411,6 +449,7 @@ export function DevConsole() {
   );
 
   const ban = useMutation(api.moderation.ban);
+  const kick = useMutation(api.moderation.kick);
   const timeout = useMutation(api.moderation.timeout);
   const clear = useMutation(api.moderation.clear);
   const setRole = useMutation(api.users.setRole);
@@ -467,6 +506,7 @@ export function DevConsole() {
       isModerator: status?.isModerator ?? false,
       moderation,
       ban,
+      kick,
       timeout,
       clear,
       setRole,

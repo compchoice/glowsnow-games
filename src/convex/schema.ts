@@ -24,9 +24,15 @@ export const scopeValidator = v.union(
   v.literal("game"),
 );
 
-/** A permanent ban, or a temporary silence. */
+/**
+ * How a member is restricted.
+ * - `ban` is permanent and only the owner can lift it.
+ * - `kick` is a removal that lapses on its own, and any moderator can undo it.
+ * - `timeout` is a silence for a chosen stretch.
+ */
 export const moderationKindValidator = v.union(
   v.literal("ban"),
+  v.literal("kick"),
   v.literal("timeout"),
 );
 

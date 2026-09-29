@@ -23,7 +23,8 @@ type Ctx = QueryCtx | MutationCtx;
 
 /** A moderation row, plus whether it still applies right now. */
 function describe(row: Doc<"moderation">, now: number) {
-  const expired = row.kind === "timeout" && row.until !== undefined && row.until <= now;
+  // Only a ban lasts forever; kicks and timeouts both carry an expiry.
+  const expired = row.kind !== "ban" && row.until !== undefined && row.until <= now;
   return {
     _id: row._id,
     userId: row.userId,
@@ -55,7 +56,7 @@ export async function currentFor(
     .withIndex("by_user", (q) => q.eq("userId", userId))
     .first();
   if (!row) return null;
-  if (row.kind === "timeout" && row.until !== undefined && row.until <= now) {
+  if (row.kind !== "ban" && row.until !== undefined && row.until <= now) {
     return null;
   }
   return row;
@@ -74,6 +75,13 @@ export async function assertCanParticipate(ctx: Ctx, user: Doc<"users">) {
       row.reason
         ? `Your account is banned from this site: ${row.reason}`
         : "Your account is banned from this site.",
+    );
+  }
+  if (row.kind === "kick") {
+    throw new Error(
+      row.until === undefined
+        ? "You have been removed from the site."
+        : `You have been removed from the site for another ${timeLeft(row.until)}.`,
     );
   }
   throw new Error(
@@ -152,6 +160,7 @@ export const abilities = query({
 
     const none = {
       canBan: false,
+      canKick: false,
       canTimeout: false,
       canClear: false,
       active: null,
@@ -166,12 +175,58 @@ export const abilities = query({
 
     return {
       canBan: outranks && isAdmin(viewer),
+      canKick: outranks && isModerator(viewer),
       canTimeout: outranks && isModerator(viewer),
       canClear: outranks && isModerator(viewer) && active !== null,
       active: active ? describe(active, Date.now()) : null,
       viewerRole: viewer.role ?? ROLES.MEMBER,
       targetRole: target.role ?? ROLES.MEMBER,
     };
+  },
+});
+
+/** How long a kick lasts by default. Short, on purpose: it is reversible. */
+const DEFAULT_KICK_MS = 60 * 60 * 1_000;
+
+/**
+ * Kick a member off the site. Unlike a ban this lapses on its own, which is why
+ * moderators are allowed to do it: the worst case is a member waits an hour.
+ */
+export const kick = mutation({
+  args: {
+    userId: v.id("users"),
+    durationMs: v.optional(v.number()),
+    reason: v.optional(v.string()),
+  },
+  handler: async (ctx, { userId, durationMs, reason }) => {
+    const moderator = await requireModerator(ctx);
+    const target = await ctx.db.get(userId);
+    if (!target) {
+      throw new Error("That member no longer exists.");
+    }
+    assertCanModerate(moderator, target);
+
+    const raw = durationMs ?? DEFAULT_KICK_MS;
+    if (!Number.isFinite(raw) || raw <= 0) {
+      throw new Error("Give a real duration, like 30m or 2h.");
+    }
+    const capped = Math.min(raw, MAX_TIMEOUT_MS);
+    const trimmed = reason?.trim().slice(0, MAX_REASON);
+
+    const existing = await currentFor(ctx, userId);
+    if (existing) {
+      await ctx.db.delete(existing._id);
+    }
+    const until = Date.now() + capped;
+    await ctx.db.insert("moderation", {
+      userId,
+      kind: "kick",
+      until,
+      reason: trimmed || undefined,
+      by: moderator._id,
+      createdAt: Date.now(),
+    });
+    return { ok: true, until, label: describeDuration(capped) };
   },
 });
 
@@ -239,7 +294,7 @@ export const timeout = mutation({
   },
 });
 
-/** Lift a ban or a timeout early. Moderators and up. */
+/** Lift a ban, kick or timeout early. Moderators and up. */
 export const clear = mutation({
   args: { userId: v.id("users") },
   handler: async (ctx, { userId }) => {
