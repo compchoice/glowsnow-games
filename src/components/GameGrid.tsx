@@ -4,7 +4,14 @@ import { FavoriteButton } from "@/components/FavoriteButton";
 import type { CatalogGame } from "@/lib/catalog";
 import { cn } from "@/lib/utils";
 
-export function GameCard({ game }: { game: CatalogGame }) {
+export function GameCard({
+  game,
+  confirmUnsave = false,
+}: {
+  game: CatalogGame;
+  /** Ask before unsaving, for grids where unsaving removes the card. */
+  confirmUnsave?: boolean;
+}) {
   return (
     <Link
       to={`/games/${game.slug}`}
@@ -40,7 +47,11 @@ export function GameCard({ game }: { game: CatalogGame }) {
           ))}
         </div>
         <div className="flex items-center gap-2">
-          <FavoriteButton slug={game.slug} />
+          <FavoriteButton
+            slug={game.slug}
+            title={game.title}
+            confirmRemove={confirmUnsave}
+          />
           <span className="flex items-center gap-1.5 text-sm font-medium text-primary">
             <Play className="size-3.5" />
             Play
@@ -54,9 +65,12 @@ export function GameCard({ game }: { game: CatalogGame }) {
 export function GameGrid({
   games,
   emptyMessage = "No games match that search yet.",
+  confirmUnsave = false,
 }: {
   games: CatalogGame[];
   emptyMessage?: string;
+  /** Ask before unsaving, for grids where unsaving removes the card. */
+  confirmUnsave?: boolean;
 }) {
   if (games.length === 0) {
     return (
@@ -69,7 +83,11 @@ export function GameGrid({
   return (
     <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
       {games.map((game) => (
-        <GameCard key={game.slug} game={game} />
+        <GameCard
+          key={game.slug}
+          game={game}
+          confirmUnsave={confirmUnsave}
+        />
       ))}
     </div>
   );

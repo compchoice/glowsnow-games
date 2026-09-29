@@ -5,21 +5,11 @@ import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
 import { PageShell } from "@/components/Layout";
 import { GameGrid } from "@/components/GameGrid";
+import { ConfirmButton } from "@/components/ConfirmAction";
 import { Eyebrow } from "@/components/SiteChrome";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from "@/components/ui/alert-dialog";
 import {
   Select,
   SelectContent,
@@ -98,6 +88,17 @@ function PlaylistCard({
     }
   }
 
+  async function handleRemoveGame(gameSlug: string) {
+    setError(null);
+    try {
+      await removeGame({ id: playlist._id, gameSlug });
+    } catch (err) {
+      setError(
+        err instanceof Error ? err.message : "Could not remove that game.",
+      );
+    }
+  }
+
   return (
     <Card className="border-border/70 bg-card/60">
       <div className="flex items-center gap-2 px-6">
@@ -106,8 +107,8 @@ function PlaylistCard({
         <span className="shrink-0 text-xs text-muted-foreground">
           {inList.length} {inList.length === 1 ? "game" : "games"}
         </span>
-        <AlertDialog>
-          <AlertDialogTrigger asChild>
+        <ConfirmButton
+          trigger={
             <Button
               variant="ghost"
               size="icon-sm"
@@ -116,27 +117,17 @@ function PlaylistCard({
             >
               <Trash2 className="size-3.5" />
             </Button>
-          </AlertDialogTrigger>
-          <AlertDialogContent>
-            <AlertDialogHeader>
-              <AlertDialogTitle>Delete “{playlist.name}”?</AlertDialogTitle>
-              <AlertDialogDescription>
-                {inList.length === 0
-                  ? "This playlist is empty, so nothing else is lost."
-                  : `The ${inList.length} ${inList.length === 1 ? "game" : "games"} in it stay saved on your shelf — only the playlist goes.`}
-              </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-              <AlertDialogCancel>Keep it</AlertDialogCancel>
-              <AlertDialogAction
-                className="bg-destructive text-white hover:bg-destructive/90 focus-visible:ring-destructive/20 dark:bg-destructive/60 dark:focus-visible:ring-destructive/40"
-                onClick={() => void handleDelete()}
-              >
-                Delete playlist
-              </AlertDialogAction>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
+          }
+          title={`Delete “${playlist.name}”?`}
+          description={
+            inList.length === 0
+              ? "This playlist is empty, so nothing else is lost."
+              : `The ${inList.length} ${inList.length === 1 ? "game" : "games"} in it stay saved on your shelf — only the playlist goes.`
+          }
+          confirmLabel="Delete playlist"
+          cancelLabel="Keep it"
+          onConfirm={handleDelete}
+        />
       </div>
 
       <CardContent className="space-y-3">
@@ -157,16 +148,21 @@ function PlaylistCard({
                 >
                   {game.title}
                 </Link>
-                <button
-                  type="button"
-                  aria-label={`Remove ${game.title} from ${playlist.name}`}
-                  className="text-muted-foreground transition-colors hover:text-destructive"
-                  onClick={() =>
-                    void removeGame({ id: playlist._id, gameSlug: game.slug })
+                <ConfirmButton
+                  trigger={
+                    <button
+                      type="button"
+                      aria-label={`Remove ${game.title} from ${playlist.name}`}
+                      className="text-muted-foreground transition-colors hover:text-destructive"
+                    >
+                      <X className="size-3" />
+                    </button>
                   }
-                >
-                  <X className="size-3" />
-                </button>
+                  title={`Remove ${game.title}?`}
+                  description={`It stays saved on your shelf — you're only taking it out of “${playlist.name}”.`}
+                  confirmLabel="Remove"
+                  onConfirm={() => handleRemoveGame(game.slug)}
+                />
               </li>
             ))}
           </ul>
@@ -302,7 +298,7 @@ export default function Shelf() {
               Nothing saved yet. Tap the heart on any game to keep it here.
             </div>
           ) : (
-            <GameGrid games={savedGames} />
+            <GameGrid games={savedGames} confirmUnsave />
           )}
         </div>
       </section>

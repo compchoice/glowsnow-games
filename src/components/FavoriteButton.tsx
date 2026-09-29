@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useLocation, useNavigate } from "react-router";
 import { useAuth } from "@/hooks/use-auth";
 import { useFavorites } from "@/hooks/use-favorites";
+import { ConfirmDialog } from "@/components/ConfirmAction";
 import { Heart } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -11,11 +12,21 @@ import { cn } from "@/lib/utils";
  */
 export function FavoriteButton({
   slug,
+  title,
   showLabel = false,
+  confirmRemove = false,
   className,
 }: {
   slug: string;
+  /** Game name, used in the confirmation copy. Falls back to the slug. */
+  title?: string;
   showLabel?: boolean;
+  /**
+   * Ask before unsaving. Only worth it where the game disappears when it is
+   * unsaved — on the shelf, not on the catalog or a game page where the heart is
+   * just a toggle.
+   */
+  confirmRemove?: boolean;
   className?: string;
 }) {
   const { isAuthenticated } = useAuth();
@@ -23,18 +34,12 @@ export function FavoriteButton({
   const navigate = useNavigate();
   const location = useLocation();
   const [pending, setPending] = useState(false);
+  const [confirmOpen, setConfirmOpen] = useState(false);
 
   const active = slugs.has(slug);
+  const label = title || slug;
 
-  async function handleClick(event: React.MouseEvent) {
-    event.preventDefault();
-    event.stopPropagation();
-
-    if (!isAuthenticated) {
-      const returnTo = `${location.pathname}${location.search}`;
-      navigate(`/auth?returnTo=${encodeURIComponent(returnTo)}`);
-      return;
-    }
+  async function save() {
     if (pending) return;
     setPending(true);
     try {
@@ -46,12 +51,34 @@ export function FavoriteButton({
     }
   }
 
-  return (
+  function handleClick(event: React.MouseEvent) {
+    event.preventDefault();
+    event.stopPropagation();
+
+    if (!isAuthenticated) {
+      const returnTo = `${location.pathname}${location.search}`;
+      navigate(`/auth?returnTo=${encodeURIComponent(returnTo)}`);
+      return;
+    }
+    if (confirmRemove && active) {
+      setConfirmOpen(true);
+      return;
+    }
+    void save();
+  }
+
+  const button = (
     <button
       type="button"
       onClick={handleClick}
       aria-pressed={active}
-      aria-label={active ? "Remove from your shelf" : "Save to your shelf"}
+      aria-haspopup={confirmRemove ? "dialog" : undefined}
+      aria-expanded={confirmRemove ? confirmOpen : undefined}
+      aria-label={
+        active
+          ? `Remove ${confirmRemove ? label : "this game"} from your shelf`
+          : "Save to your shelf"
+      }
       title={active ? "Saved to your shelf" : "Save to your shelf"}
       className={cn(
         "flex items-center gap-1.5 rounded-lg border px-2 py-1 text-xs transition-colors",
@@ -64,5 +91,21 @@ export function FavoriteButton({
       <Heart className={cn("size-3.5", active && "fill-current")} />
       {showLabel && (active ? "Saved" : "Save")}
     </button>
+  );
+
+  if (!confirmRemove) return button;
+
+  return (
+    <>
+      {button}
+      <ConfirmDialog
+        open={confirmOpen}
+        onOpenChange={setConfirmOpen}
+        title={`Remove ${label} from your shelf?`}
+        description="It stays in the catalog — you can save it again any time."
+        confirmLabel="Remove"
+        onConfirm={save}
+      />
+    </>
   );
 }
