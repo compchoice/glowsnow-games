@@ -3,7 +3,7 @@ export const SITE_NAME = "Dex:Active";
 export const SITE_TAGLINE = "Play, search, and talk — all from one clean tab.";
 export const SITE_DESCRIPTION =
   "Dex:Active is a hosted arcade with a Brave-powered search proxy and a members' lounge.";
-export const BASE_TITLE = "Dex:Active — Games, search and community";
+export const BASE_TITLE = "❄ Dex:Active — Games, search and community";
 
 /** Proxy: Brave Search (opens in a new tab so results can never be frame-broken) */
 export const BRAVE_SEARCH_URL = "https://search.brave.com/search?q=";

@@ -1,6 +1,8 @@
 import { useEffect } from "react";
 import { devStore, useDevTools } from "@/lib/dev-store";
 import { applyCloak, setCloak } from "@/lib/cloak";
+import { snowflakeFavicon } from "@/lib/favicon";
+import { accentById, useTheme } from "@/lib/theme";
 import { TAB_PRESETS } from "@/lib/site";
 
 /**
@@ -15,10 +17,15 @@ const ESCAPE_OWNERS =
 /** Keeps the cloaked tab title in sync across reloads and route changes. */
 export function SiteEffects() {
   const [state] = useDevTools();
+  const [theme] = useTheme();
+
+  // The tab icon is a snowflake in the current accent, so it tracks the accent
+  // picker. applyCloak runs last and wins whenever a disguise is active.
+  const icon = snowflakeFavicon(accentById(theme.accent).hue, theme.mode);
 
   useEffect(() => {
-    applyCloak(state.panicTab);
-  }, [state.panicTab]);
+    applyCloak(state.panicTab, icon);
+  }, [state.panicTab, icon]);
 
   // The panic key: Escape disguises the tab instantly.
   useEffect(() => {
