@@ -15,10 +15,34 @@ import { NAV_LINKS, SITE_NAME, SITE_TAGLINE } from "@/lib/site";
 import { cn } from "@/lib/utils";
 import { LogOut, Menu, LayoutDashboard, Sparkles, X } from "lucide-react";
 
+/** Snowflakes drifting across the wordmark. Decorative, so hidden from AT. */
+const FLAKES = [
+  { left: "14%", top: "-30%", duration: "4.5s", delay: "0s" },
+  { left: "44%", top: "-45%", duration: "5.5s", delay: "1.3s" },
+  { left: "76%", top: "-25%", duration: "6.2s", delay: "2.7s" },
+];
+
 function Wordmark() {
   return (
-    <span className="text-base font-semibold tracking-tight">
-      Dex<span className="text-primary">:</span>Active
+    <span className="relative inline-block">
+      <span className="wordmark text-base font-semibold tracking-tight">
+        Dex:Active
+      </span>
+      <span aria-hidden className="pointer-events-none absolute inset-0">
+        {FLAKES.map((flake) => (
+          <span
+            key={flake.left}
+            className="wordmark-flake absolute size-[3px] rounded-full"
+            style={{
+              left: flake.left,
+              top: flake.top,
+              backgroundColor: "color-mix(in oklab, var(--glow) 85%, white)",
+              boxShadow: "0 0 6px color-mix(in oklab, var(--glow) 70%, transparent)",
+              animation: `snow-drift ${flake.duration} ${flake.delay} linear infinite`,
+            }}
+          />
+        ))}
+      </span>
     </span>
   );
 }

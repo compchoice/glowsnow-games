@@ -183,6 +183,54 @@ html[data-accent="rose"] {
   box-shadow: 0 0 0 1px color-mix(in oklab, var(--glow) 12%, transparent);
 }
 
+/* ---- Wordmark ----
+   The site name: an accent gradient clipped into the text, with the bloom
+   faked with drop-shadow because text-shadow cannot glow transparent text.
+   Colours come from the accent tokens, so it follows the visitor's accent. */
+@utility wordmark {
+  background-image: linear-gradient(
+    96deg,
+    var(--primary) 0%,
+    color-mix(in oklab, var(--primary) 42%, var(--foreground)) 26%,
+    var(--chart-1) 58%,
+    var(--primary) 100%
+  );
+  background-size: 220% 100%;
+  background-position: 0% 50%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  -webkit-text-fill-color: transparent;
+  filter: drop-shadow(0 0 5px color-mix(in oklab, var(--glow) 45%, transparent))
+    drop-shadow(0 0 15px color-mix(in oklab, var(--glow) 30%, transparent));
+  animation: wordmark-shimmer 8s ease-in-out infinite;
+}
+
+/* Snowfall caught in the wordmark. One flake per span, staggered. */
+@keyframes snow-drift {
+  0% {
+    opacity: 0;
+    transform: translateY(-4px) scale(0.6);
+  }
+  30% {
+    opacity: 0.9;
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(9px) scale(0.4);
+  }
+}
+
+@keyframes wordmark-shimmer {
+  0%,
+  100% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+}
+
 /* ---- Motion ---- */
 @keyframes fade-rise {
   from {
@@ -344,7 +392,11 @@ html[data-accent="rose"] {
     scroll-behavior: auto;
   }
   .animate-fade-rise,
-  .animate-blink-caret {
+  .animate-blink-caret,
+  .wordmark {
     animation: none;
+  }
+  .wordmark-flake {
+    display: none;
   }
 }
