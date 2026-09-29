@@ -39,13 +39,11 @@ function timeAgo(timestamp: number) {
 
 export default function Profile() {
   const { userId = "" } = useParams();
-  const looksLikeId = /^[a-z0-9]{8,}$/i.test(userId);
-  const profile = useQuery(
-    api.profiles.get,
-    looksLikeId ? { userId: userId as Id<"users"> } : "skip",
-  );
+  // The query normalises whatever is in the URL, so a malformed id simply
+  // reads as "member not found" instead of erroring the whole page.
+  const profile = useQuery(api.profiles.get, userId ? { userId } : "skip");
 
-  if (!looksLikeId || profile === null) {
+  if (!userId || profile === null) {
     return (
       <PageShell>
         <Eyebrow>Not found</Eyebrow>

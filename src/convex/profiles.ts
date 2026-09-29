@@ -13,33 +13,39 @@ const MAX_AVATAR = 8;
  * profile or you are the owner.
  */
 export const get = query({
-  args: { userId: v.id("users") },
+  args: { userId: v.string() },
   handler: async (ctx, { userId }) => {
-    const user = await ctx.db.get(userId);
+    // Take a raw string and normalise it, so a hand-typed or stale profile URL
+    // can never blow up argument validation — an unknown id just reads as a
+    // member who does not exist.
+    const id = ctx.db.normalizeId("users", userId);
+    if (!id) return null;
+
+    const user = await ctx.db.get(id);
     if (!user) return null;
 
     const viewer = await getCurrentUser(ctx);
-    const isSelf = viewer?._id === userId;
+    const isSelf = viewer?._id === id;
     const viewerIsAdmin = isAdmin(viewer);
 
     const [authored, chat, favorites, playlists] = await Promise.all([
       ctx.db
         .query("messages")
-        .withIndex("by_author", (q) => q.eq("authorId", userId))
+        .withIndex("by_author", (q) => q.eq("authorId", id))
         .order("desc")
         .collect(),
       ctx.db
         .query("chatMessages")
-        .withIndex("by_author", (q) => q.eq("authorId", userId))
+        .withIndex("by_author", (q) => q.eq("authorId", id))
         .order("desc")
         .collect(),
       ctx.db
         .query("favorites")
-        .withIndex("by_user", (q) => q.eq("userId", userId))
+        .withIndex("by_user", (q) => q.eq("userId", id))
         .collect(),
       ctx.db
         .query("playlists")
-        .withIndex("by_user", (q) => q.eq("userId", userId))
+        .withIndex("by_user", (q) => q.eq("userId", id))
         .collect(),
     ]);
 

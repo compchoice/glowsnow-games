@@ -180,11 +180,12 @@ function PlaylistCard({
 
 export default function Shelf() {
   const { games, isLoading } = useCatalog();
-  const { rows, slugs } = useFavorites();
+  const { rows, slugs, isLoading: favoritesLoading } = useFavorites();
   const playlists = useQuery(api.playlists.mine) as PlaylistRow[] | undefined;
   const create = useMutation(api.playlists.create);
 
   const [newName, setNewName] = useState("");
+  const [createError, setCreateError] = useState<string | null>(null);
 
   // Saved games, most recently played first.
   const savedGames = useMemo(() => {
@@ -207,8 +208,15 @@ export default function Shelf() {
 
   async function handleCreate() {
     if (!newName.trim()) return;
-    await create({ name: newName });
-    setNewName("");
+    setCreateError(null);
+    try {
+      await create({ name: newName });
+      setNewName("");
+    } catch (error) {
+      setCreateError(
+        error instanceof Error ? error.message : "Could not create that playlist.",
+      );
+    }
   }
 
   return (
@@ -240,7 +248,11 @@ export default function Shelf() {
           </p>
         </div>
         <div className="mt-4">
-          {savedGames.length === 0 ? (
+          {isLoading || favoritesLoading ? (
+            <div className="rounded-xl border border-dashed border-border/70 px-6 py-12 text-center text-sm text-muted-foreground">
+              Loading your shelf…
+            </div>
+          ) : savedGames.length === 0 ? (
             <div className="rounded-xl border border-dashed border-border/70 px-6 py-12 text-center text-sm text-muted-foreground">
               Nothing saved yet. Tap the heart on any game to keep it here.
             </div>
@@ -280,6 +292,10 @@ export default function Shelf() {
             </Button>
           </form>
         </div>
+
+        {createError && (
+          <p className="mt-3 text-sm text-destructive">{createError}</p>
+        )}
 
         <div className="mt-4 grid gap-4 lg:grid-cols-2">
           {playlists === undefined ? (
