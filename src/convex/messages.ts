@@ -2,6 +2,7 @@ import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
 import { getCurrentUser, isAdmin, requireAdmin, requireUser, displayName } from "./lib";
 import { scopeValidator } from "./schema";
+import { assertCanParticipate } from "./moderation";
 
 const MAX_BODY = 800;
 
@@ -59,6 +60,7 @@ export const post = mutation({
   },
   handler: async (ctx, args) => {
     const user = await requireUser(ctx);
+    await assertCanParticipate(ctx, user);
     const body = args.body.trim();
     if (!body) throw new Error("Write something first.");
     if (body.length > MAX_BODY) {

@@ -22,6 +22,12 @@ export const scopeValidator = v.union(
   v.literal("game"),
 );
 
+/** A permanent ban, or a temporary silence. */
+export const moderationKindValidator = v.union(
+  v.literal("ban"),
+  v.literal("timeout"),
+);
+
 const schema = defineSchema(
   {
     // default auth tables using convex auth.
@@ -94,6 +100,17 @@ const schema = defineSchema(
       createdAt: v.number(),
       updatedAt: v.optional(v.number()),
     }).index("by_user", ["userId", "createdAt"]),
+
+    // Owner moderation. One row per moderated member; the newest wins.
+    moderation: defineTable({
+      userId: v.id("users"),
+      kind: moderationKindValidator,
+      /** When the timeout lapses. Absent for a permanent ban. */
+      until: v.optional(v.number()),
+      reason: v.optional(v.string()),
+      by: v.optional(v.id("users")),
+      createdAt: v.number(),
+    }).index("by_user", ["userId"]),
 
     // Who is in the chat right now, and who is mid-sentence. One row per user.
     chatPresence: defineTable({

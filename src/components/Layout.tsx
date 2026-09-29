@@ -5,6 +5,7 @@ import { motion } from "framer-motion";
 import { api } from "@/convex/_generated/api";
 import { useAuth } from "@/hooks/use-auth";
 import { DEV_COMMANDS } from "@/lib/dev-commands";
+import { sendToConsole } from "@/lib/console-bridge";
 import { CloakMenu, SnowToggle } from "@/components/SiteChrome";
 import { ThemeMenu } from "@/components/ThemeMenu";
 import { NotificationBell } from "@/components/NotificationBell";
@@ -211,16 +212,26 @@ export function SiteFooter() {
             <kbd className="rounded border border-border/70 bg-muted px-1.5 py-0.5 text-[11px]">
               Ctrl + `
             </kbd>{" "}
-            or the terminal button.
+            or the terminal button. Click any command to load it.
           </p>
-          <ul className="mt-3 space-y-1.5 text-sm">
+          <ul className="mt-3 space-y-1 text-sm">
             {DEV_COMMANDS.map((command) => (
-              <li key={command.cmd} className="flex gap-2">
-                <code className="shrink-0 text-primary">
-                  {command.cmd}
-                  {command.args ? ` ${command.args}` : ""}
-                </code>
-                <span className="text-muted-foreground">— {command.desc}</span>
+              <li key={command.cmd}>
+                <button
+                  type="button"
+                  onClick={() =>
+                    sendToConsole(
+                      `${command.cmd}${command.args ? ` ${command.args}` : ""}`,
+                    )
+                  }
+                  className="flex w-full gap-2 rounded px-1 py-0.5 text-left transition-colors hover:bg-accent/60"
+                >
+                  <code className="shrink-0 text-primary">
+                    {command.cmd}
+                    {command.args ? ` ${command.args}` : ""}
+                  </code>
+                  <span className="text-muted-foreground">— {command.desc}</span>
+                </button>
               </li>
             ))}
           </ul>

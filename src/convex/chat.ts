@@ -4,6 +4,7 @@ import { mutation, query } from "./_generated/server";
 import type { Doc, Id } from "./_generated/dataModel";
 import type { MutationCtx } from "./_generated/server";
 import { displayName, requireUser } from "./lib";
+import { assertCanParticipate, currentFor } from "./moderation";
 
 const MAX_BODY = 500;
 const DEFAULT_LIMIT = 200;
@@ -41,15 +42,24 @@ export const presence = query({
       (row) => now - row.lastSeenAt < ONLINE_WINDOW_MS,
     );
 
+    // A banned or silenced member can still read the room, but they should not
+    // appear in the roster or in the typing indicator.
+    const muted = new Set<string>();
+    for (const row of await ctx.db.query("moderation").collect()) {
+      const live = await currentFor(ctx, row.userId, now);
+      if (live) muted.add(row.userId);
+    }
+    const visible = online.filter((row) => !muted.has(row.userId));
+
     return {
-      onlineCount: online.length,
-      online: online
+      onlineCount: visible.length,
+      online: visible
         .map((row) => ({
           userId: row.userId as string,
           name: row.name,
         }))
         .sort((a, b) => a.name.localeCompare(b.name)),
-      typing: online
+      typing: visible
         .filter((row) => row.typingAt && now - row.typingAt < TYPING_WINDOW_MS)
         .map((row) => ({ userId: row.userId as string, name: row.name }))
         .sort((a, b) => a.name.localeCompare(b.name)),
@@ -96,6 +106,7 @@ export const send = mutation({
   args: { body: v.string() },
   handler: async (ctx, { body }) => {
     const user = await requireUser(ctx);
+    await assertCanParticipate(ctx, user);
     const text = body.trim();
     if (!text) throw new Error("Write something first.");
     if (text.length > MAX_BODY) {
@@ -120,6 +131,15 @@ export const heartbeat = mutation({
   args: { typing: v.optional(v.boolean()) },
   handler: async (ctx, { typing }) => {
     const user = await requireUser(ctx);
+    // A silenced member keeps their heartbeat (so they are not shown as
+    // dropped) but can no longer claim to be typing.
+    if (typing) {
+      const live = await currentFor(ctx, user._id);
+      if (live) {
+        await touchPresence(ctx, user, { typing: false });
+        return { ok: false };
+      }
+    }
     await touchPresence(ctx, user, typing === undefined ? {} : { typing });
     return { ok: true };
   },

@@ -1,8 +1,14 @@
 import { useEffect, useRef, useState } from "react";
+import { useMutation, useQuery } from "convex/react";
+import { api } from "@/convex/_generated/api";
+import type { Id } from "@/convex/_generated/dataModel";
 import { devStore, useDevTools } from "@/lib/dev-store";
 import { setCloak } from "@/lib/cloak";
 import { DEV_COMMANDS } from "@/lib/dev-commands";
 import { ACCENTS, themeStore } from "@/lib/theme";
+import { onConsoleCommand } from "@/lib/console-bridge";
+import { findMember, searchMembers, type MemberLike } from "@/lib/members";
+import { describeDuration, parseDuration } from "@/convex/duration";
 import { SITE_NAME, TAB_PRESETS } from "@/lib/site";
 import { Terminal, X } from "lucide-react";
 
@@ -22,13 +28,63 @@ const CLOAK_ALIASES: Record<string, number> = {
   "khan academy": 5,
 };
 
-function runCommand(raw: string, println: (line: Line) => void) {
+type ModerationRow = {
+  userId: string;
+  name: string;
+  kind: string;
+  summary: string;
+  reason: string | null;
+};
+
+type CommandContext = {
+  println: (line: Line) => void;
+  members: MemberLike[];
+  isAdmin: boolean;
+  moderation: ModerationRow[] | undefined;
+  ban: (args: { userId: Id<"users">; reason?: string }) => Promise<unknown>;
+  timeout: (args: {
+    userId: Id<"users">;
+    durationMs: number;
+    reason?: string;
+  }) => Promise<unknown>;
+  clear: (args: { userId: Id<"users"> }) => Promise<unknown>;
+};
+
+function describeError(error: unknown, fallback: string) {
+  return error instanceof Error && error.message ? error.message : fallback;
+}
+
+async function runCommand(raw: string, ctx: CommandContext) {
+  const { println } = ctx;
   const input = raw.trim();
   if (!input) return;
   println({ kind: "input", text: input });
 
-  const [cmd, ...rest] = input.toLowerCase().split(/\s+/);
-  const arg = rest.join(" ");
+  const tokens = input.split(/\s+/);
+  // The command and the single-argument form are case-insensitive, but member
+  // names are not — so the raw tokens are kept for anything that names a person.
+  const cmd = (tokens[0] ?? "").toLowerCase();
+  const args = tokens.slice(1).filter(Boolean);
+  const arg = args.join(" ").toLowerCase();
+
+  /** Shared tail for the moderation commands. */
+  function needMember(needle?: string) {
+    if (!ctx.isAdmin) {
+      println({ kind: "error", text: "Only the owner can moderate." });
+      return null;
+    }
+    if (!needle) return null;
+    const member = findMember(needle, ctx.members);
+    if (member) return member;
+    const close = searchMembers(needle, ctx.members).slice(0, 5);
+    println({
+      kind: "error",
+      text: close.length
+        ? `No single member matches “${needle}”. Did you mean: ${close.map((m) => m.name).join(", ")}?`
+        : `No member matches “${needle}”.`,
+    });
+    return null;
+  }
 
   switch (cmd) {
     case "help":
@@ -40,6 +96,136 @@ function runCommand(raw: string, println: (line: Line) => void) {
         });
       }
       break;
+
+    case "mods":
+    case "moderation": {
+      if (!ctx.isAdmin) {
+        println({ kind: "error", text: "Only the owner can moderate." });
+        break;
+      }
+      const rows = ctx.moderation;
+      if (rows === undefined) {
+        println({ kind: "output", text: "Loading moderation…" });
+        break;
+      }
+      if (rows.length === 0) {
+        println({ kind: "output", text: "Nobody is moderated." });
+        break;
+      }
+      for (const row of rows) {
+        println({
+          kind: "output",
+          text: `  ${row.name} — ${row.kind} · ${row.summary}${row.reason ? ` · ${row.reason}` : ""}`,
+        });
+      }
+      break;
+    }
+
+    case "ban": {
+      if (!ctx.isAdmin) {
+        println({ kind: "error", text: "Only the owner can moderate." });
+        break;
+      }
+      const member = needMember(args[0]);
+      if (!member) {
+        if (!args[0]) println({ kind: "error", text: "Usage: ban <member> [reason]" });
+        break;
+      }
+      try {
+        await ctx.ban({
+          userId: member._id as Id<"users">,
+          reason: args.slice(1).join(" ") || undefined,
+        });
+        println({ kind: "output", text: `Banned ${member.name}.` });
+      } catch (error) {
+        println({ kind: "error", text: describeError(error, "Could not ban that member.") });
+      }
+      break;
+    }
+
+    case "timeout":
+    case "mute": {
+      if (!ctx.isAdmin) {
+        println({ kind: "error", text: "Only the owner can moderate." });
+        break;
+      }
+      // `mute ana` means ten minutes; `timeout ana 2h` spells it out.
+      const durationText = args[1] ?? (cmd === "mute" ? "10m" : "");
+      const member = needMember(args[0]);
+      if (!member) {
+        if (!args[0]) {
+          println({
+            kind: "error",
+            text: cmd === "mute"
+              ? "Usage: mute <member> [duration] [reason]"
+              : "Usage: timeout <member> <duration> [reason]",
+          });
+        }
+        break;
+      }
+      const ms = parseDuration(durationText);
+      if (ms === null) {
+        println({
+          kind: "error",
+          text: "Give a duration like 10m, 2h, 1d or 1w.",
+        });
+        break;
+      }
+      const reason = args[1] ? args.slice(2).join(" ") : args.slice(1).join(" ");
+      try {
+        await ctx.timeout({
+          userId: member._id as Id<"users">,
+          durationMs: ms,
+          reason: reason || undefined,
+        });
+        println({
+          kind: "output",
+          text: `Silenced ${member.name} for ${describeDuration(ms)}.`,
+        });
+      } catch (error) {
+        println({
+          kind: "error",
+          text: describeError(error, "Could not time that member out."),
+        });
+      }
+      break;
+    }
+
+    case "unban":
+    case "unmute":
+    case "untimeout": {
+      const member = needMember(args[0]);
+      if (!member) {
+        if (!args[0]) println({ kind: "error", text: "Usage: unban <member>" });
+        break;
+      }
+      try {
+        await ctx.clear({ userId: member._id as Id<"users"> });
+        println({ kind: "output", text: `Lifted moderation for ${member.name}.` });
+      } catch (error) {
+        println({
+          kind: "error",
+          text: describeError(error, "That member is not moderated."),
+        });
+      }
+      break;
+    }
+
+    case "check":
+    case "who": {
+      if (!ctx.isAdmin) {
+        println({ kind: "error", text: "Only the owner can look members up." });
+        break;
+      }
+      const member = needMember(args[0]);
+      if (!member) {
+        if (!args[0]) println({ kind: "error", text: "Usage: check <member>" });
+        break;
+      }
+      const row = (ctx.moderation ?? []).find((entry) => entry.userId === member._id);
+      println({ kind: "output", text: `${member.name} — ${row ? `${row.kind} · ${row.summary}` : "not moderated"}` });
+      break;
+    }
 
     case "snow":
       if (arg === "on" || arg === "off") {
@@ -142,6 +328,16 @@ export function DevConsole() {
 
   const open = state.devConsoleOpen;
 
+  const status = useQuery(api.users.adminStatus);
+  const directory = useQuery(api.profiles.directory);
+  const moderation = useQuery(
+    api.moderation.list,
+    status?.isAdmin ? {} : "skip",
+  );
+  const ban = useMutation(api.moderation.ban);
+  const timeout = useMutation(api.moderation.timeout);
+  const clear = useMutation(api.moderation.clear);
+
   useEffect(() => {
     if (scrollRef.current) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
@@ -151,6 +347,16 @@ export function DevConsole() {
   useEffect(() => {
     if (open) inputRef.current?.focus();
   }, [open]);
+
+  // A command clicked in the footer opens the console with it prefilled.
+  useEffect(
+    () =>
+      onConsoleCommand((text) => {
+        setState({ devConsoleOpen: true });
+        setValue(text);
+      }),
+    [setState],
+  );
 
   useEffect(() => {
     function onKey(event: KeyboardEvent) {
@@ -177,7 +383,15 @@ export function DevConsole() {
     setValue("");
     setHistory((items) => [...items.slice(-40), raw]);
     setHistoryIndex(null);
-    runCommand(raw, println);
+    void runCommand(raw, {
+      println,
+      members: directory ?? [],
+      isAdmin: status?.isAdmin ?? false,
+      moderation,
+      ban,
+      timeout,
+      clear,
+    });
   }
 
   function handleKeyDown(event: React.KeyboardEvent<HTMLInputElement>) {
