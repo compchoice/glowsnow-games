@@ -141,3 +141,32 @@ describe("DEFAULT_GAMES embed targets", () => {
     expect(hextris?.embedUrl).toBe("https://hextris.github.io/");
   });
 });
+
+describe("catalog curation", () => {
+  const slugs = DEFAULT_GAMES.map((game) => game.slug);
+
+  // These were pulled as too plain for the shelf. Keeping them out stops a
+  // future copy-paste from quietly putting them back.
+  test("the plain vintage puzzles stay out", () => {
+    for (const gone of ["peg-solitaire", "lightup", "net", "tents", "fifteen", "tetris"]) {
+      expect(slugs).not.toContain(gone);
+    }
+  });
+
+  test("Granny and Granny 2 are both here and playable", () => {
+    for (const want of ["granny", "granny-2"]) {
+      const game = DEFAULT_GAMES.find((entry) => entry.slug === want);
+      expect(game).toBeDefined();
+      // The portal's page URL is the wrapper; the .embed path is the frame.
+      expect(game?.embedUrl.endsWith(".embed")).toBe(true);
+      expect(game?.category).toBe("Horror");
+    }
+  });
+
+  test("every game is reachable through the proxy fallback", () => {
+    for (const game of DEFAULT_GAMES) {
+      const target = game.proxyUrl ?? game.embedUrl;
+      expect(target.startsWith("https://")).toBe(true);
+    }
+  });
+});
