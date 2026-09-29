@@ -25,9 +25,13 @@ function readInitial(): DevToolsState {
   try {
     const raw = window.localStorage.getItem(STORAGE_KEY);
     if (!raw) return DEFAULT_STATE;
+    // The open/closed panel state is session-only, so it is never restored.
     const parsed = JSON.parse(raw) as Partial<DevToolsState>;
-    const { devConsoleOpen: _ignored, ...persisted } = parsed;
-    return { ...DEFAULT_STATE, ...persisted, devConsoleOpen: false };
+    return {
+      devConsoleOpen: false,
+      snow: parsed.snow ?? DEFAULT_STATE.snow,
+      panicTab: parsed.panicTab ?? DEFAULT_STATE.panicTab,
+    };
   } catch {
     return DEFAULT_STATE;
   }

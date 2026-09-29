@@ -50,7 +50,8 @@ export default function Proxy() {
       </header>
 
       <div className="mt-6">
-        <ProxyBrowser initialQuery={query} />
+        {/* Keyed on the query so handing over a new search remounts cleanly. */}
+        <ProxyBrowser key={query} initialQuery={query} />
       </div>
 
       <section className="mt-12 grid gap-4 sm:grid-cols-3">

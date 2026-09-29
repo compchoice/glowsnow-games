@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -26,32 +26,47 @@ type Entry = { target: string; proxy: string };
 
 const START_SEARCH = "https://search.brave.com/";
 
+/** Turns free text into a history entry: an address, or a Brave search. */
+function entryFor(input: string | undefined | null): Entry | null {
+  const trimmed = input?.trim();
+  if (!trimmed) return null;
+  const resolved = resolveAddress(trimmed);
+  const target =
+    resolved.kind === "address"
+      ? resolved.value
+      : `${BRAVE_SEARCH_URL}${encodeURIComponent(resolved.value)}`;
+  const wrapped = proxyUrl(target);
+  return wrapped ? { target, proxy: wrapped } : null;
+}
+
 export function ProxyBrowser({ initialQuery }: { initialQuery?: string }) {
   const endpoint = proxyEndpoint();
+  const initial = entryFor(initialQuery);
 
-  const [entries, setEntries] = useState<Entry[]>([]);
-  const [index, setIndex] = useState(-1);
-  const [address, setAddress] = useState("");
+  const [entries, setEntries] = useState<Entry[]>(() =>
+    initial ? [initial] : [],
+  );
+  const [index, setIndex] = useState(() => (initial ? 0 : -1));
+  const [address, setAddress] = useState(() => initial?.target ?? "");
+  const [loading, setLoading] = useState(() => Boolean(initial));
   const [reloadKey, setReloadKey] = useState(0);
-  const [loading, setLoading] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
-  const started = useRef(false);
 
   const current = index >= 0 ? entries[index] : undefined;
 
-  const go = useCallback((target: string) => {
+  function go(rawTarget: string) {
+    // Unwrap a pasted proxied link so it can't get wrapped twice.
+    const target = displayTarget(rawTarget.trim());
     const wrapped = proxyUrl(target);
     if (!wrapped) return;
     setNotice(null);
     setLoading(true);
-    setEntries((previous) => {
-      const next = previous.slice(0, index + 1);
-      next.push({ target, proxy: wrapped });
-      setIndex(next.length - 1);
-      return next;
-    });
+    const next = entries.slice(0, index + 1);
+    next.push({ target, proxy: wrapped });
+    setEntries(next);
+    setIndex(next.length - 1);
     setAddress(target);
-  }, [index]);
+  }
 
   function openInBrowser(input: string) {
     const resolved = resolveAddress(input);
@@ -62,16 +77,14 @@ export function ProxyBrowser({ initialQuery }: { initialQuery?: string }) {
     }
   }
 
-  // First load: whatever the landing page handed over, or the start screen.
-  useEffect(() => {
-    if (started.current || !endpoint) return;
-    started.current = true;
-    if (initialQuery?.trim()) {
-      const resolved = resolveAddress(initialQuery);
-      if (resolved.kind === "address") go(resolved.value);
-      else go(`${BRAVE_SEARCH_URL}${encodeURIComponent(resolved.value)}`);
-    }
-  }, [endpoint, go, initialQuery]);
+  function step(direction: -1 | 1) {
+    const next = index + direction;
+    if (next < 0 || next >= entries.length) return;
+    setIndex(next);
+    setLoading(true);
+    setNotice(null);
+    setAddress(entries[next].target);
+  }
 
   // The framed page reports proxy-level problems via postMessage.
   useEffect(() => {
@@ -88,15 +101,6 @@ export function ProxyBrowser({ initialQuery }: { initialQuery?: string }) {
 
   const canGoBack = index > 0;
   const canGoForward = index >= 0 && index < entries.length - 1;
-
-  function step(direction: -1 | 1) {
-    const next = index + direction;
-    if (next < 0 || next >= entries.length) return;
-    setIndex(next);
-    setLoading(true);
-    setNotice(null);
-    setAddress(entries[next].target);
-  }
 
   if (!endpoint) {
     return (
@@ -159,7 +163,7 @@ export function ProxyBrowser({ initialQuery }: { initialQuery?: string }) {
         </div>
 
         <div className="relative flex-1">
-          <Lock className="pointer-events-none absolute left-3 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground" />
+          <Lock className="pointer-events-none absolute top-1/2 left-3 size-3.5 -translate-y-1/2 text-muted-foreground" />
           <Input
             value={address}
             onChange={(event) => setAddress(event.target.value)}
@@ -261,7 +265,7 @@ export function ProxyBrowser({ initialQuery }: { initialQuery?: string }) {
       <div className="flex flex-wrap items-center justify-between gap-3 border-t border-border/70 px-4 py-2.5 text-xs text-muted-foreground">
         <span className="flex items-center gap-1.5">
           <Lock className="size-3" />
-          {current ? `proxied · ${current.target}` : "nothing loaded yet"}
+          {current ? `proxied · ${displayTarget(current.target)}` : "nothing loaded yet"}
         </span>
         {current && (
           <span className="flex items-center gap-3">
