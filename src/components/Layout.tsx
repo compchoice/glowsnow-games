@@ -4,7 +4,7 @@ import { useQuery } from "convex/react";
 import { motion } from "framer-motion";
 import { api } from "@/convex/_generated/api";
 import { useAuth } from "@/hooks/use-auth";
-import { DEV_COMMANDS } from "@/lib/dev-commands";
+import { COMMAND_GROUPS, commandLine, commandsIn } from "@/lib/dev-commands";
 import { sendToConsole } from "@/lib/console-bridge";
 import { SettingsMenu } from "@/components/SettingsMenu";
 import { RestrictedBanner } from "@/components/RestrictedBanner";
@@ -12,10 +12,11 @@ import { NotificationBell } from "@/components/NotificationBell";
 import { MemberAvatar } from "@/components/MemberAvatar";
 import { MemberCount } from "@/components/MemberCount";
 import { Button } from "@/components/ui/button";
-import { NAV_LINKS, SITE_NAME, SITE_TAGLINE } from "@/lib/site";
+import { NAV_LINKS, SECONDARY_LINKS, SITE_NAME, SITE_TAGLINE } from "@/lib/site";
 import { cn } from "@/lib/utils";
 import { SiteSearch } from "@/components/SiteSearch";
-import { LogOut, Menu, LayoutDashboard, Lightbulb, Mail, Search, Sparkles, X } from "lucide-react";
+import { MoreMenu } from "@/components/MoreMenu";
+import { LogOut, Menu, LayoutDashboard, Lightbulb, Search, Sparkles, X } from "lucide-react";
 
 /** Snowflakes drifting across the wordmark. Decorative, so hidden from AT. */
 const FLAKES = [
@@ -94,22 +95,7 @@ export function SiteHeader() {
               {link.label}
             </RouterNavLink>
           ))}
-          {status?.isModerator && (
-            <RouterNavLink to="/staff" className={linkClass}>
-              Staff
-            </RouterNavLink>
-          )}
-          {isAuthenticated && (
-            <RouterNavLink to="/messages" className={linkClass} title="Messages">
-              <Mail className="size-4" />
-              <span className="sr-only">Messages</span>
-            </RouterNavLink>
-          )}
-          {status?.isAdmin && (
-            <RouterNavLink to="/admin" className={linkClass}>
-              Admin
-            </RouterNavLink>
-          )}
+          <MoreMenu />
         </nav>
 
         <div className="ml-auto flex items-center gap-2">
@@ -198,16 +184,7 @@ export function SiteHeader() {
           <div className="px-3 py-2">
             <SiteSearch />
           </div>
-          {isAuthenticated && (
-            <RouterNavLink
-              to="/messages"
-              onClick={() => setMenuOpen(false)}
-              className="block rounded-lg px-3 py-2 text-sm text-muted-foreground hover:bg-accent hover:text-foreground"
-            >
-              Messages
-            </RouterNavLink>
-          )}
-          {[...NAV_LINKS, ...(status?.isModerator ? [{ label: "Staff", to: "/staff" }] : []), ...(status?.isAdmin ? [{ label: "Admin", to: "/admin" }] : [])].map(
+          {[...NAV_LINKS, ...SECONDARY_LINKS, ...(isAuthenticated ? [{ label: "Messages", to: "/messages" }] : []), ...(status?.isModerator ? [{ label: "Staff", to: "/staff" }] : []), ...(status?.isAdmin ? [{ label: "Admin", to: "/admin" }] : [])].map(
             (link) => (
               <RouterNavLink
                 key={link.to}
@@ -265,7 +242,8 @@ export function SiteFooter() {
             {SITE_TAGLINE} Built for one owner and the people who drop by.
           </p>
           <div className="mt-4 flex flex-wrap gap-3 text-sm">
-            {NAV_LINKS.map((link) => (
+            {/* The footer lists everything, not just what fits the header bar. */}
+            {[...NAV_LINKS, ...SECONDARY_LINKS].map((link) => (
               <Link
                 key={link.to}
                 to={link.to}
@@ -323,27 +301,37 @@ export function SiteFooter() {
               </kbd>{" "}
               or the terminal button. Click any command to load it.
             </p>
-            <ul className="mt-3 space-y-1 text-sm">
-              {DEV_COMMANDS.map((command) => (
-                <li key={command.cmd}>
-                  <button
-                    type="button"
-                    onClick={() =>
-                      sendToConsole(
-                        `${command.cmd}${command.args ? ` ${command.args}` : ""}`,
-                      )
-                    }
-                    className="flex w-full gap-2 rounded px-1 py-0.5 text-left transition-colors hover:bg-accent/60"
-                  >
-                    <code className="shrink-0 text-primary">
-                      {command.cmd}
-                      {command.args ? ` ${command.args}` : ""}
-                    </code>
-                    <span className="text-muted-foreground">— {command.desc}</span>
-                  </button>
-                </li>
-              ))}
-            </ul>
+            <div className="mt-3 space-y-4">
+              {COMMAND_GROUPS.map((group) => {
+                const commands = commandsIn(group.id);
+                if (commands.length === 0) return null;
+                return (
+                  <div key={group.id}>
+                    <p className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground/80">
+                      {group.label}
+                    </p>
+                    <ul className="mt-1 space-y-0.5 text-sm">
+                      {commands.map((command) => (
+                        <li key={command.cmd}>
+                          <button
+                            type="button"
+                            onClick={() => sendToConsole(commandLine(command))}
+                            className="flex w-full gap-2 rounded px-1 py-0.5 text-left transition-colors hover:bg-accent/60"
+                          >
+                            <code className="shrink-0 text-primary">
+                              {commandLine(command)}
+                            </code>
+                            <span className="text-muted-foreground">
+                              — {command.desc}
+                            </span>
+                          </button>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                );
+              })}
+            </div>
           </div>
         )}
       </div>

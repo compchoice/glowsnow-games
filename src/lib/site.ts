@@ -10,11 +10,19 @@ export const BRAVE_SEARCH_URL = "https://search.brave.com/search?q=";
 
 export type NavLink = { label: string; to: string };
 
+/**
+ * The four things most people came for. They sit in the header on every screen
+ * size; everything else lives under "More" so the bar never has to wrap.
+ */
 export const NAV_LINKS: NavLink[] = [
   { label: "Games", to: "/games" },
   { label: "Proxy", to: "/proxy" },
   { label: "Community", to: "/community" },
   { label: "Chat", to: "/chat" },
+];
+
+/** Secondary destinations, folded into the header's "More" menu. */
+export const SECONDARY_LINKS: NavLink[] = [
   { label: "Polls", to: "/polls" },
   { label: "Leaderboard", to: "/leaderboard" },
   { label: "Shelf", to: "/shelf" },

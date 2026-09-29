@@ -4,7 +4,7 @@ import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
 import { devStore, useDevTools } from "@/lib/dev-store";
 import { setCloak } from "@/lib/cloak";
-import { DEV_COMMANDS } from "@/lib/dev-commands";
+import { COMMAND_GROUPS, commandLine, commandsIn } from "@/lib/dev-commands";
 import { achievementByKey } from "@/lib/engagement";
 import { ACCENTS, FONTS, WALLPAPERS, themeStore } from "@/lib/theme";
 import { onConsoleCommand } from "@/lib/console-bridge";
@@ -15,6 +15,21 @@ import { Terminal, X } from "lucide-react";
 
 const ROLES = ["member", "user", "moderator", "admin"] as const;
 type RoleName = (typeof ROLES)[number];
+
+/** Shapes the informational commands read, mirrored from their queries. */
+type AuditEntry = { actorName: string; action: string; detail: string | null };
+type PresenceInfo = { onlineCount: number; online: { name: string }[] };
+type LeaderboardRow = {
+  rank: number;
+  name: string;
+  points: number;
+  badges: number;
+};
+type MineBadges = { earned: string[]; points: number };
+type RoomInfo = { readonly id: string; readonly label: string; readonly topic: string };
+/** The channel list is a compile-time constant upstream, so it arrives frozen. */
+type RoomList = readonly RoomInfo[];
+type SearchHit = { kind: string; title: string; detail: string; href: string };
 
 type Line = { kind: "input" | "output" | "error" | "clear"; text: string };
 
@@ -65,22 +80,21 @@ type CommandContext = {
     linkLabel?: string;
   }) => Promise<unknown>;
   clearAnnouncement: (args: Record<string, never>) => Promise<unknown>;
-  /** The mod audit trail. */
-  audit: Awaited<ReturnType<typeof useQuery<typeof api.reports.audit>>>;
-  /** Who is in chat right now. */
-  online: Awaited<ReturnType<typeof useQuery<typeof api.chat.presence>>>;
-  /** Top of the points table. */
-  leaderboard: Awaited<
-    ReturnType<typeof useQuery<typeof api.achievements.leaderboard>>
-  >;
-  /** The caller's own badges. */
-  badges: Awaited<ReturnType<typeof useQuery<typeof api.achievements.mine>>>;
-  /** Every chat room. */
-  rooms: Awaited<ReturnType<typeof useQuery<typeof api.chat.channels>>>;
+  /**
+   * Read-only data for the informational commands. Held in one object so the
+   * mutation surface above stays readable, and so it is obvious which fields
+   * are a snapshot the server pushed rather than something the console did.
+   */
+  info: {
+    audit: AuditEntry[] | undefined;
+    online: PresenceInfo | undefined;
+    leaderboard: LeaderboardRow[] | undefined;
+    badges: MineBadges | undefined;
+    rooms: RoomList | undefined;
+  };
   /** Anything the site search can find. */
   search: (args: { query: string }) => Promise<
-    | { hits: { kind: string; title: string; detail: string; href: string }[] }
-    | undefined
+    { hits: SearchHit[] } | undefined
   >;
 };
 
@@ -123,11 +137,16 @@ async function runCommand(raw: string, ctx: CommandContext) {
   switch (cmd) {
     case "help":
       println({ kind: "output", text: "Developer commands:" });
-      for (const spec of DEV_COMMANDS) {
-        println({
-          kind: "output",
-          text: `  ${spec.cmd}${spec.args ? ` ${spec.args}` : ""} — ${spec.desc}`,
-        });
+      for (const group of COMMAND_GROUPS) {
+        const commands = commandsIn(group.id);
+        if (commands.length === 0) continue;
+        println({ kind: "output", text: `  ${group.label}` });
+        for (const command of commands) {
+          println({
+            kind: "output",
+            text: `    ${commandLine(command)} — ${command.desc}`,
+          });
+        }
       }
       break;
 
@@ -475,7 +494,7 @@ async function runCommand(raw: string, ctx: CommandContext) {
         println({ kind: "error", text: "You need moderator access to do that." });
         break;
       }
-      const rows = ctx.audit ?? [];
+      const rows = ctx.info.audit ?? [];
       if (rows.length === 0) {
         println({ kind: "output", text: "No staff actions recorded yet." });
         break;
@@ -491,17 +510,17 @@ async function runCommand(raw: string, ctx: CommandContext) {
 
     case "rooms":
     case "channels": {
-      for (const room of ctx.rooms ?? []) {
+      for (const room of ctx.info.rooms ?? []) {
         println({ kind: "output", text: `  #${room.id} — ${room.topic}` });
       }
       break;
     }
 
     case "online": {
-      const people = ctx.online?.online ?? [];
+      const people = ctx.info.online?.online ?? [];
       println({
         kind: "output",
-        text: `${ctx.online?.onlineCount ?? 0} in chat right now.`,
+        text: `${ctx.info.online?.onlineCount ?? 0} in chat right now.`,
       });
       for (const person of people.slice(0, 15)) {
         println({ kind: "output", text: `  ${person.name}` });
@@ -511,7 +530,7 @@ async function runCommand(raw: string, ctx: CommandContext) {
 
     case "rank":
     case "leaderboard": {
-      const rows = ctx.leaderboard ?? [];
+      const rows = ctx.info.leaderboard ?? [];
       if (rows.length === 0) {
         println({ kind: "output", text: "Nobody has earned a badge yet." });
         break;
@@ -526,7 +545,7 @@ async function runCommand(raw: string, ctx: CommandContext) {
     }
 
     case "badges": {
-      const earned = ctx.badges?.earned ?? [];
+      const earned = ctx.info.badges?.earned ?? [];
       if (earned.length === 0) {
         println({
           kind: "output",
@@ -534,7 +553,7 @@ async function runCommand(raw: string, ctx: CommandContext) {
         });
         break;
       }
-      println({ kind: "output", text: `You have ${ctx.badges?.points ?? 0} points:` });
+      println({ kind: "output", text: `You have ${ctx.info.badges?.points ?? 0} points:` });
       for (const key of earned) {
         const badge = achievementByKey(key);
         if (badge) {
@@ -684,11 +703,7 @@ export function DevConsole() {
     void runCommand(raw, {
       println,
       members: directory ?? [],
-      audit,
-      online,
-      leaderboard,
-      badges,
-      rooms,
+      info: { audit, online, leaderboard, badges, rooms },
       search: (args) => convex.query(api.search.all, args),
       isAdmin: status?.isAdmin ?? false,
       isModerator: status?.isModerator ?? false,
