@@ -10,6 +10,17 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
 import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+import {
   Select,
   SelectContent,
   SelectItem,
@@ -75,6 +86,18 @@ function PlaylistCard({
     }
   }
 
+  /** Deleting a playlist cannot be undone, so it only runs after a confirm. */
+  async function handleDelete() {
+    setError(null);
+    try {
+      await remove({ id: playlist._id });
+    } catch (err) {
+      setError(
+        err instanceof Error ? err.message : "Could not delete that playlist.",
+      );
+    }
+  }
+
   return (
     <Card className="border-border/70 bg-card/60">
       <div className="flex items-center gap-2 px-6">
@@ -83,15 +106,37 @@ function PlaylistCard({
         <span className="shrink-0 text-xs text-muted-foreground">
           {inList.length} {inList.length === 1 ? "game" : "games"}
         </span>
-        <Button
-          variant="ghost"
-          size="icon-sm"
-          className="ml-auto shrink-0 text-muted-foreground hover:text-destructive"
-          aria-label={`Delete ${playlist.name}`}
-          onClick={() => void remove({ id: playlist._id })}
-        >
-          <Trash2 className="size-3.5" />
-        </Button>
+        <AlertDialog>
+          <AlertDialogTrigger asChild>
+            <Button
+              variant="ghost"
+              size="icon-sm"
+              className="ml-auto shrink-0 text-muted-foreground hover:text-destructive"
+              aria-label={`Delete ${playlist.name}`}
+            >
+              <Trash2 className="size-3.5" />
+            </Button>
+          </AlertDialogTrigger>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Delete “{playlist.name}”?</AlertDialogTitle>
+              <AlertDialogDescription>
+                {inList.length === 0
+                  ? "This playlist is empty, so nothing else is lost."
+                  : `The ${inList.length} ${inList.length === 1 ? "game" : "games"} in it stay saved on your shelf — only the playlist goes.`}
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Keep it</AlertDialogCancel>
+              <AlertDialogAction
+                className="bg-destructive text-white hover:bg-destructive/90 focus-visible:ring-destructive/20 dark:bg-destructive/60 dark:focus-visible:ring-destructive/40"
+                onClick={() => void handleDelete()}
+              >
+                Delete playlist
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </div>
 
       <CardContent className="space-y-3">
