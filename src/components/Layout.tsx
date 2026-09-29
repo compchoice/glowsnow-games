@@ -231,9 +231,7 @@ export function SiteFooter() {
       <div
         className={cn(
           "mx-auto grid w-full max-w-6xl gap-10 px-4 py-10 sm:px-6",
-          canModerate
-            ? "md:grid-cols-[1.4fr_1fr_1fr]"
-            : "md:grid-cols-[1.4fr_1fr]",
+          "md:grid-cols-2",
         )}
       >
         <div>
@@ -286,22 +284,28 @@ export function SiteFooter() {
             </Link>
           </Button>
         </div>
+      </div>
 
-        {/* Staff only: the command list hands out console shortcuts, so members
-            and guests never see it. */}
-        {canModerate && (
-          <div>
-            <p className="text-xs font-medium uppercase tracking-[0.2em] text-muted-foreground">
-              Developer commands
-            </p>
-            <p className="mt-2 text-sm text-muted-foreground">
-              The console sits in the bottom-left corner. Summon it with{" "}
-              <kbd className="rounded border border-border/70 bg-muted px-1.5 py-0.5 text-[11px]">
-                Ctrl + `
-              </kbd>{" "}
-              or the terminal button. Click any command to load it.
-            </p>
-            <div className="mt-3 space-y-4">
+      {/* Staff only, and on its own full-width row. Squeezing 38 commands into
+          a narrow grid column made them clump; one column per group with
+          single-line rows scans far better. */}
+      {canModerate && (
+        <div className="mx-auto w-full max-w-6xl px-4 pb-10 sm:px-6">
+          <div className="rounded-xl border border-border/70 bg-background/40 p-5">
+            <div className="flex flex-wrap items-baseline justify-between gap-2">
+              <p className="text-xs font-medium uppercase tracking-[0.2em] text-muted-foreground">
+                Developer commands
+              </p>
+              <p className="text-xs text-muted-foreground">
+                Console lives in the bottom-left · press{" "}
+                <kbd className="rounded border border-border/70 bg-muted px-1.5 py-0.5 text-[11px]">
+                  Ctrl + `
+                </kbd>{" "}
+                · click a command to load it
+              </p>
+            </div>
+
+            <div className="mt-4 grid gap-x-8 gap-y-5 sm:grid-cols-2 lg:grid-cols-4">
               {COMMAND_GROUPS.map((group) => {
                 const commands = commandsIn(group.id);
                 if (commands.length === 0) return null;
@@ -310,19 +314,24 @@ export function SiteFooter() {
                     <p className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground/80">
                       {group.label}
                     </p>
-                    <ul className="mt-1 space-y-0.5 text-sm">
+                    <ul className="mt-1.5 space-y-0.5">
                       {commands.map((command) => (
                         <li key={command.cmd}>
                           <button
                             type="button"
                             onClick={() => sendToConsole(commandLine(command))}
-                            className="flex w-full gap-2 rounded px-1 py-0.5 text-left transition-colors hover:bg-accent/60"
+                            // The row is one line, so the full example and
+                            // wording live in the tooltip.
+                            title={`${commandLine(command)} — ${command.desc}`}
+                            className="group flex w-full items-baseline gap-2 rounded px-1.5 py-0.5 text-left transition-colors hover:bg-accent/60"
                           >
-                            <code className="shrink-0 text-primary">
-                              {commandLine(command)}
+                            <code className="shrink-0 text-[12px] text-primary">
+                              {command.cmd}
                             </code>
-                            <span className="text-muted-foreground">
-                              — {command.desc}
+                            {/* One line per command, always: a wrapping
+                                description is what turns this back into a clump. */}
+                            <span className="truncate text-[12px] text-muted-foreground transition-colors group-hover:text-foreground">
+                              {command.desc}
                             </span>
                           </button>
                         </li>
@@ -333,8 +342,8 @@ export function SiteFooter() {
               })}
             </div>
           </div>
-        )}
-      </div>
+        </div>
+      )}
 
       <div className="flex flex-wrap items-center justify-center gap-x-3 gap-y-2 border-t border-border/70 py-4 text-center text-xs text-muted-foreground">
         <MemberCount />

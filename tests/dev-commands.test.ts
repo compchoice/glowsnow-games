@@ -42,6 +42,21 @@ describe("developer command list", () => {
   test("help is offered, since every other command is discovered through it", () => {
     expect(DEV_COMMANDS.some((command) => command.cmd === "help")).toBe(true);
   });
+
+  test("descriptions stay short enough to read without truncating", () => {
+    // The footer renders one line per command. A long description wraps or
+    // clips, which is what makes the list clump, so the tooltip carries the
+    // full wording and this keeps the short part short.
+    for (const command of DEV_COMMANDS) {
+      expect(command.desc.length).toBeLessThanOrEqual(32);
+    }
+  });
+
+  test("every group fits one column without being enormous", () => {
+    for (const group of COMMAND_GROUPS) {
+      expect(commandsIn(group.id).length).toBeLessThanOrEqual(13);
+    }
+  });
 });
 
 describe("navigation", () => {
