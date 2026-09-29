@@ -6,6 +6,7 @@ import { PageShell } from "@/components/Layout";
 import { GameGrid } from "@/components/GameGrid";
 import { MemberAvatar } from "@/components/MemberAvatar";
 import { ProxyPanel } from "@/components/ProxyPanel";
+import { AnnouncementHero } from "@/components/AnnouncementHero";
 import { Eyebrow } from "@/components/SiteChrome";
 import { Button } from "@/components/ui/button";
 import { useCatalog } from "@/hooks/use-catalog";
@@ -73,9 +74,7 @@ export default function Landing() {
       {/* Hero */}
       <section className="py-6 sm:py-12">
         <Eyebrow>Hosted arcade · private search · community</Eyebrow>
-        <h1 className="mt-3 max-w-3xl text-4xl font-semibold leading-[1.1] tracking-tight sm:text-5xl">
-          Games, search and your people — in one clean tab.
-        </h1>
+        <AnnouncementHero />
         <p className="mt-4 max-w-2xl text-base text-muted-foreground sm:text-lg">
           {SITE_TAGLINE} Dex:Active is a hosted website: a playable games
           catalog, a Brave-powered search proxy, and a members&apos; lounge

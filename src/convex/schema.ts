@@ -96,6 +96,20 @@ const schema = defineSchema(
       .index("email", ["email"]) // index for the email. do not remove or modify
       .index("by_role", ["role"]), // lets the header ask "is there an owner?" without scanning every user
 
+    // The site-wide announcement shown in the landing hero. Only one row is
+    // active at a time; setting a new one retires the last.
+    announcements: defineTable({
+      message: v.string(),
+      /** Optional call to action. Internal paths only, checked on write. */
+      linkTo: v.optional(v.string()),
+      linkLabel: v.optional(v.string()),
+      by: v.optional(v.id("users")),
+      createdAt: v.number(),
+      active: v.boolean(),
+    })
+      .index("by_active", ["active", "createdAt"])
+      .index("by_createdAt", ["createdAt"]),
+
     // The playable catalog. Owners manage this from the admin area.
     games: defineTable({
       slug: v.string(),

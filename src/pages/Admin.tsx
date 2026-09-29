@@ -6,6 +6,7 @@ import { PageShell } from "@/components/Layout";
 import { Messages } from "@/components/Messages";
 import { ConfirmButton } from "@/components/ConfirmAction";
 import { ModerationPanel } from "@/components/ModerationPanel";
+import { AnnouncementEditor } from "@/components/AnnouncementEditor";
 import { Eyebrow } from "@/components/SiteChrome";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -455,6 +456,8 @@ export default function Admin() {
           </table>
         </div>
       </section>
+
+      <AnnouncementEditor />
 
       {/* Moderation */}
       <section className="mt-12">
