@@ -179,6 +179,32 @@ export const DEFAULT_GAMES: GameSeed[] = [
     featured: false,
   },
   {
+    slug: "lightup",
+    title: "Light Up",
+    category: "Puzzle",
+    description:
+      "Place lamps that light every wall and bulb. The grid fills with false certainty.",
+    tags: ["logic", "puzzle", "solo"],
+    embedUrl:
+      "https://www.chiark.greenend.org.uk/~sgtatham/puzzles/js/lightup.html",
+    playUrl:
+      "https://www.chiark.greenend.org.uk/~sgtatham/puzzles/js/lightup.html",
+    featured: false,
+  },
+  {
+    slug: "map-puzzle",
+    title: "Jigsaw Map",
+    category: "Puzzle",
+    description:
+      "Pick a place on the map and cut it into pieces to put back together.",
+    tags: ["puzzle", "relaxing", "map"],
+    embedUrl:
+      "https://www.chiark.greenend.org.uk/~sgtatham/puzzles/js/map.html",
+    playUrl:
+      "https://www.chiark.greenend.org.uk/~sgtatham/puzzles/js/map.html",
+    featured: false,
+  },
+  {
     slug: "flappy-bird",
     title: "Flappy Bird",
     category: "Arcade",

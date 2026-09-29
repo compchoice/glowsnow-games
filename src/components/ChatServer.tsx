@@ -17,6 +17,7 @@ import { Crown, Hash, Shield, UserRound } from "lucide-react";
 export function ChatServer() {
   const channels = useQuery(api.chat.channels);
   const presence = useQuery(api.chat.presence, {});
+  const unread = useQuery(api.chat.unread, {});
   const friends = useQuery(api.friends.mine);
   const directory = useMemberDirectory();
   const { games } = useCatalog();
@@ -46,26 +47,35 @@ export function ChatServer() {
         <p className="px-2 pt-1 pb-2 text-[11px] font-semibold tracking-[0.18em] text-muted-foreground uppercase">
           Dex:Active
         </p>
-        {rooms.map((room) => (
-          <Link
-            key={room.id}
-            to={`/chat?channel=${room.id}`}
-            onClick={(event) => {
-              // Keep the URL tidy without a full navigation.
-              event.preventDefault();
-              setParams({ channel: room.id });
-            }}
-            className={cn(
-              "flex items-center gap-1.5 rounded-lg px-2 py-1.5 text-sm transition-colors",
-              room.id === active.id
-                ? "bg-primary/15 font-medium text-primary"
-                : "text-muted-foreground hover:bg-accent/60 hover:text-foreground",
-            )}
-          >
-            <Hash className="size-3.5 shrink-0" />
-            <span className="truncate">{room.label}</span>
-          </Link>
-        ))}
+        {rooms.map((room) => {
+          const count = unread?.channels[room.id] ?? 0;
+          const isActive = room.id === active.id;
+          return (
+            <Link
+              key={room.id}
+              to={`/chat?channel=${room.id}`}
+              onClick={(event) => {
+                // Keep the URL tidy without a full navigation.
+                event.preventDefault();
+                setParams({ channel: room.id });
+              }}
+              className={cn(
+                "flex items-center gap-1.5 rounded-lg px-2 py-1.5 text-sm transition-colors",
+                isActive
+                  ? "bg-primary/15 font-medium text-primary"
+                  : "text-muted-foreground hover:bg-accent/60 hover:text-foreground",
+              )}
+            >
+              <Hash className="size-3.5 shrink-0" />
+              <span className="truncate">{room.label}</span>
+              {count > 0 && !isActive && (
+                <span className="ml-auto flex size-4 shrink-0 items-center justify-center rounded-full bg-primary text-[10px] font-semibold text-primary-foreground">
+                  {count > 99 ? "99+" : count}
+                </span>
+              )}
+            </Link>
+          );
+        })}
 
         {featured.length > 0 && (
           <div className="mt-3 border-t border-border/70 pt-3">
@@ -145,6 +155,12 @@ export function ChatServer() {
                 name={request.name}
               />
             ))}
+            <Link
+              to="/dashboard"
+              className="mt-1 block px-2 text-[11px] text-primary hover:underline"
+            >
+              See all on your dashboard
+            </Link>
           </div>
         )}
 

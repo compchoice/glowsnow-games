@@ -7,6 +7,7 @@ import { GamePlayer } from "@/components/GamePlayer";
 import { GameGrid } from "@/components/GameGrid";
 import { Messages } from "@/components/Messages";
 import { FavoriteButton } from "@/components/FavoriteButton";
+import { GameReviews } from "@/components/GameReviews";
 import { Eyebrow } from "@/components/SiteChrome";
 import { Button } from "@/components/ui/button";
 import { useCatalog } from "@/hooks/use-catalog";
@@ -110,6 +111,8 @@ export default function GameDetail() {
           />
         </div>
       </section>
+
+      <GameReviews gameSlug={game.slug} />
 
       {related.length > 0 && (
         <section className="mt-12">

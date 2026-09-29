@@ -6,6 +6,7 @@ import type { Id } from "@/convex/_generated/dataModel";
 import { PageShell } from "@/components/Layout";
 import { GameGrid } from "@/components/GameGrid";
 import { ConfirmButton } from "@/components/ConfirmAction";
+import { toast } from "sonner";
 import { Eyebrow } from "@/components/SiteChrome";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -88,10 +89,18 @@ function PlaylistCard({
     }
   }
 
-  async function handleRemoveGame(gameSlug: string) {
+  async function handleRemoveGame(gameSlug: string, gameTitle: string) {
     setError(null);
     try {
       await removeGame({ id: playlist._id, gameSlug });
+      // Reversible, so a toast beats a dialog.
+      toast(`Removed ${gameTitle} from ${playlist.name}`, {
+        action: {
+          label: "Undo",
+          onClick: () =>
+            void addGame({ id: playlist._id, gameSlug }).catch(() => undefined),
+        },
+      });
     } catch (err) {
       setError(
         err instanceof Error ? err.message : "Could not remove that game.",
@@ -148,21 +157,14 @@ function PlaylistCard({
                 >
                   {game.title}
                 </Link>
-                <ConfirmButton
-                  trigger={
-                    <button
-                      type="button"
-                      aria-label={`Remove ${game.title} from ${playlist.name}`}
-                      className="text-muted-foreground transition-colors hover:text-destructive"
-                    >
-                      <X className="size-3" />
-                    </button>
-                  }
-                  title={`Remove ${game.title}?`}
-                  description={`It stays saved on your shelf — you're only taking it out of “${playlist.name}”.`}
-                  confirmLabel="Remove"
-                  onConfirm={() => handleRemoveGame(game.slug)}
-                />
+                <button
+                  type="button"
+                  aria-label={`Remove ${game.title} from ${playlist.name}`}
+                  className="text-muted-foreground transition-colors hover:text-destructive"
+                  onClick={() => void handleRemoveGame(game.slug, game.title)}
+                >
+                  <X className="size-3" />
+                </button>
               </li>
             ))}
           </ul>

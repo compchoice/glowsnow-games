@@ -9,7 +9,7 @@ export function GameCard({
   confirmUnsave = false,
 }: {
   game: CatalogGame;
-  /** Ask before unsaving, for grids where unsaving removes the card. */
+  /** Announce an unsave with an undo toast, for the shelf. */
   confirmUnsave?: boolean;
 }) {
   return (
@@ -50,7 +50,7 @@ export function GameCard({
           <FavoriteButton
             slug={game.slug}
             title={game.title}
-            confirmRemove={confirmUnsave}
+            undoable={confirmUnsave}
           />
           <span className="flex items-center gap-1.5 text-sm font-medium text-primary">
             <Play className="size-3.5" />

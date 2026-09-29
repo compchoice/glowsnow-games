@@ -3,7 +3,7 @@ import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
 import type { Doc, Id } from "./_generated/dataModel";
 import type { MutationCtx } from "./_generated/server";
-import { displayName, requireUser } from "./lib";
+import { displayName, getCurrentUser, requireUser } from "./lib";
 import { assertCanParticipate, currentFor } from "./moderation";
 
 const MAX_BODY = 500;
@@ -29,6 +29,69 @@ function checkChannel(channel: string): string {
 const ONLINE_WINDOW_MS = 25_000;
 /** How long one keystroke keeps someone "typing". */
 const TYPING_WINDOW_MS = 4_500;
+
+/** Unread counts per room, for the sidebar badges. */
+export const unread = query({
+  args: {},
+  handler: async (ctx) => {
+    const user = await getCurrentUser(ctx);
+    if (!user) return { channels: {} as Record<string, number>, total: 0 };
+
+    const [rows, read] = await Promise.all([
+      ctx.db
+        .query("chatMessages")
+        .withIndex("by_createdAt")
+        .order("desc")
+        .take(400),
+      ctx.db
+        .query("chatReadState")
+        .withIndex("by_user_channel", (q) => q.eq("userId", user._id))
+        .collect(),
+    ]);
+
+    const lastRead = new Map(read.map((row) => [row.channel, row.lastReadAt]));
+    const counts: Record<string, number> = {};
+
+    for (const message of rows) {
+      const room = message.channel ?? DEFAULT_CHANNEL;
+      const since = lastRead.get(room) ?? 0;
+      if (message.authorId === user._id) continue;
+      if (message.createdAt <= since) continue;
+      counts[room] = (counts[room] ?? 0) + 1;
+    }
+
+    return {
+      channels: counts,
+      total: Object.values(counts).reduce((sum, n) => sum + n, 0),
+    };
+  },
+});
+
+/** Marks a room read up to now. */
+export const markRead = mutation({
+  args: { channel: v.optional(v.string()) },
+  handler: async (ctx, { channel }) => {
+    const user = await requireUser(ctx);
+    const room = checkChannel(channel ?? DEFAULT_CHANNEL);
+    const existing = await ctx.db
+      .query("chatReadState")
+      .withIndex("by_user_channel", (q) =>
+        q.eq("userId", user._id).eq("channel", room),
+      )
+      .first();
+
+    if (existing) {
+      await ctx.db.patch(existing._id, { lastReadAt: Date.now() });
+    } else {
+      await ctx.db.insert("chatReadState", {
+        userId: user._id,
+        channel: room,
+        lastReadAt: Date.now(),
+      });
+    }
+    return { ok: true };
+  },
+});
 
 /** The channel list, for the server sidebar. */
 export const channels = query({

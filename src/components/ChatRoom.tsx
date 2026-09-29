@@ -51,6 +51,7 @@ export function ChatRoom({
   const messages = useQuery(api.chat.list, { channel });
   const presence = useQuery(api.chat.presence, {});
   const heartbeat = useMutation(api.chat.heartbeat);
+  const markRead = useMutation(api.chat.markRead);
   const leave = useMutation(api.chat.leave);
 
   /**
@@ -75,6 +76,8 @@ export function ChatRoom({
   const [draft, setDraft] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [pinned, setPinned] = useState(true);
+  const [missed, setMissed] = useState(0);
+  const [seenCount, setSeenCount] = useState(0);
   const listRef = useRef<HTMLDivElement>(null);
   const lastTypingSentAt = useRef(0);
 
@@ -84,11 +87,31 @@ export function ChatRoom({
   );
 
   // Stay with the conversation: follow the newest message while pinned.
+  // This effect is a pure DOM write — the missed counter is derived during
+  // render below instead of being set from here.
   useEffect(() => {
     const element = listRef.current;
     if (!element || !pinned) return;
     element.scrollTop = element.scrollHeight;
   }, [rows.length, pinned]);
+
+  // Adjust-during-render: how many messages have arrived while the reader was
+  // scrolled away. Counted from the raw messages, not `rows`, which also holds
+  // the day separators and would inflate the number.
+  const messageCount = messages?.length ?? 0;
+  if (pinned) {
+    if (missed !== 0) setMissed(0);
+    if (seenCount !== messageCount) setSeenCount(messageCount);
+  } else if (messageCount > seenCount) {
+    setMissed(messageCount - seenCount);
+    setSeenCount(messageCount);
+  }
+
+  // A room counts as read once you are actually at the bottom of it.
+  useEffect(() => {
+    if (!pinned || !isAuthenticated) return;
+    void markRead({ channel }).catch(() => undefined);
+  }, [pinned, isAuthenticated, channel, rows.length, markRead]);
 
   // Presence: announce ourselves, keep the heartbeat going, leave on unmount.
   useEffect(() => {
@@ -146,7 +169,9 @@ export function ChatRoom({
     if (!element) return;
     const distance =
       element.scrollHeight - element.scrollTop - element.clientHeight;
-    setPinned(distance < 80);
+    const atBottom = distance < 80;
+    setPinned(atBottom);
+    if (atBottom) setMissed(0);
   }
 
   const draftRows = Math.min(4, Math.max(1, draft.split("\n").length));
@@ -329,13 +354,17 @@ export function ChatRoom({
           type="button"
           onClick={() => {
             setPinned(true);
+            setMissed(0);
+            setSeenCount(messageCount);
             const element = listRef.current;
             if (element) element.scrollTop = element.scrollHeight;
           }}
           className="absolute bottom-24 left-1/2 z-10 flex -translate-x-1/2 items-center gap-1.5 rounded-full border border-border/70 bg-card px-3 py-1.5 text-xs text-muted-foreground shadow-sm transition-colors hover:border-primary/40 hover:text-foreground"
         >
           <ArrowDown className="size-3.5" />
-          Jump to latest
+          {missed > 0
+            ? `${missed} new ${missed === 1 ? "message" : "messages"}`
+            : "Jump to latest"}
         </button>
       )}
     </div>

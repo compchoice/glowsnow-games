@@ -7,6 +7,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { DEV_COMMANDS } from "@/lib/dev-commands";
 import { sendToConsole } from "@/lib/console-bridge";
 import { SettingsMenu } from "@/components/SettingsMenu";
+import { RestrictedBanner } from "@/components/RestrictedBanner";
 import { NotificationBell } from "@/components/NotificationBell";
 import { MemberAvatar } from "@/components/MemberAvatar";
 import { MemberCount } from "@/components/MemberCount";
@@ -327,6 +328,7 @@ export function PageShell({
 }) {
   return (
     <div className="relative z-[2] flex min-h-screen flex-col">
+      <RestrictedBanner />
       <SiteHeader />
       <motion.main
         initial={{ opacity: 0, y: 8 }}

@@ -5,6 +5,7 @@ import type { Id } from "@/convex/_generated/dataModel";
 import { PageShell } from "@/components/Layout";
 import { Messages } from "@/components/Messages";
 import { ConfirmButton } from "@/components/ConfirmAction";
+import { ModerationPanel } from "@/components/ModerationPanel";
 import { Eyebrow } from "@/components/SiteChrome";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -469,6 +470,10 @@ export default function Admin() {
       </section>
 
       {/* Members */}
+      <div className="mt-12">
+        <ModerationPanel />
+      </div>
+
       <section className="mt-12">
         <h2 className="text-xl font-semibold tracking-tight">Members</h2>
         <p className="mt-1.5 text-sm text-muted-foreground">

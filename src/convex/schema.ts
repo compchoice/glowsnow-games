@@ -132,6 +132,27 @@ const schema = defineSchema(
       updatedAt: v.optional(v.number()),
     }).index("by_user", ["userId", "createdAt"]),
 
+    // Member reviews for a game. One row per member per game.
+    reviews: defineTable({
+      gameSlug: v.string(),
+      userId: v.id("users"),
+      authorName: v.string(),
+      /** Whole stars, 1 (bad) to 5 (great). */
+      rating: v.number(),
+      body: v.optional(v.string()),
+      createdAt: v.number(),
+      updatedAt: v.optional(v.number()),
+    })
+      .index("by_game", ["gameSlug", "createdAt"])
+      .index("by_user_game", ["userId", "gameSlug"]),
+
+    // How far each member has read in each chat room, for unread badges.
+    chatReadState: defineTable({
+      userId: v.id("users"),
+      channel: v.string(),
+      lastReadAt: v.number(),
+    }).index("by_user_channel", ["userId", "channel"]),
+
     // Owner moderation. One row per moderated member; the newest wins.
     moderation: defineTable({
       userId: v.id("users"),

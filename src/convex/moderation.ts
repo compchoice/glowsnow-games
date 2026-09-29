@@ -83,6 +83,28 @@ export async function assertCanParticipate(ctx: Ctx, user: Doc<"users">) {
   );
 }
 
+/**
+ * The caller's own moderation state. This is what the restricted-account page
+ * and the site banner read, so a silenced member is told why and until when
+ * without having to try posting first.
+ */
+export const myStatus = query({
+  args: {},
+  handler: async (ctx) => {
+    const user = await getCurrentUser(ctx);
+    if (!user) return null;
+    const row = await currentFor(ctx, user._id);
+    if (!row) return null;
+    return {
+      kind: row.kind,
+      reason: row.reason ?? null,
+      createdAt: row.createdAt,
+      until: row.until ?? null,
+      summary: describe(row, Date.now()).summary,
+    };
+  },
+});
+
 /** Everything currently in force, newest first. Moderators and up. */
 export const list = query({
   args: {},

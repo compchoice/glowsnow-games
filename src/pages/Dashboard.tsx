@@ -5,6 +5,7 @@ import { formatDistanceToNow } from "date-fns";
 import { api } from "@/convex/_generated/api";
 import { PageShell } from "@/components/Layout";
 import { MemberAvatar } from "@/components/MemberAvatar";
+import { FriendsPanel } from "@/components/FriendsPanel";
 import { Eyebrow } from "@/components/SiteChrome";
 import { Button } from "@/components/ui/button";
 import {
@@ -194,6 +195,15 @@ export default function Dashboard() {
                   </Link>
                 </Button>
               )}
+            </CardContent>
+          </Card>
+
+          <Card className="border-border/70 bg-card/60">
+            <CardHeader>
+              <CardTitle className="text-base">Friends &amp; requests</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <FriendsPanel />
             </CardContent>
           </Card>
 

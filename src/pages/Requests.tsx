@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { Link } from "react-router";
 import { useMutation, useQuery } from "convex/react";
 import { formatDistanceToNow } from "date-fns";
@@ -54,6 +54,29 @@ export default function Requests() {
   const [body, setBody] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [query, setQuery] = useState("");
+  const [filter, setFilter] = useState<Status | "all">("all");
+
+  const visible = useMemo(() => {
+    const needle = query.trim().toLowerCase();
+    return (requests ?? []).filter((row) => {
+      if (filter !== "all" && row.status !== filter) return false;
+      if (!needle) return true;
+      return (
+        row.title.toLowerCase().includes(needle) ||
+        row.body.toLowerCase().includes(needle) ||
+        row.author.toLowerCase().includes(needle)
+      );
+    });
+  }, [requests, query, filter]);
+
+  const counts = useMemo(() => {
+    const base: Record<string, number> = { all: requests?.length ?? 0 };
+    for (const status of STATUSES) {
+      base[status] = (requests ?? []).filter((r) => r.status === status).length;
+    }
+    return base;
+  }, [requests]);
 
   async function handleCreate(event: React.FormEvent) {
     event.preventDefault();
@@ -143,14 +166,45 @@ export default function Requests() {
       </section>
 
       <div className="mt-8 space-y-4">
+        {/* Filter + search */}
+        <div className="flex flex-wrap items-center gap-2">
+          <Input
+            value={query}
+            onChange={(event) => setQuery(event.target.value)}
+            placeholder="Search requests…"
+            aria-label="Search requests"
+            className="h-9 w-full sm:w-64"
+          />
+          <div className="flex flex-wrap gap-1.5">
+            {(["all", ...STATUSES] as const).map((option) => (
+              <button
+                key={option}
+                type="button"
+                onClick={() => setFilter(option)}
+                className={cn(
+                  "rounded-full border px-3 py-1 text-xs transition-colors",
+                  filter === option
+                    ? "border-primary/40 bg-primary/10 text-primary"
+                    : "border-border/70 text-muted-foreground hover:text-foreground",
+                )}
+              >
+                {option === "all" ? "All" : STATUS_LABEL[option]}{" "}
+                <span className="opacity-60">{counts[option] ?? 0}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+
         {requests === undefined ? (
           <p className="text-sm text-muted-foreground">Loading the board…</p>
-        ) : requests.length === 0 ? (
+        ) : visible.length === 0 ? (
           <div className="rounded-xl border border-dashed border-border/70 px-6 py-12 text-center text-sm text-muted-foreground">
-            Nothing here yet. Be the first to ask for something.
+            {requests.length === 0
+              ? "Nothing here yet. Be the first to ask for something."
+              : "No requests match that."}
           </div>
         ) : (
-          requests.map((row) => (
+          visible.map((row) => (
             <RequestCard
               key={row._id}
               request={row}
