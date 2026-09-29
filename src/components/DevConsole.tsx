@@ -1075,22 +1075,22 @@ export function DevConsole() {
           ref={scrollRef}
           className="min-h-0 flex-1 space-y-1 overflow-y-auto px-3 py-2 font-mono text-xs leading-5"
         >
-        {lines.map((line, index) =>
-          line.kind === "input" ? (
-            <p key={index} className="text-primary">
-              <span className="text-muted-foreground">$ </span>
-              {line.text}
-            </p>
-          ) : line.kind === "error" ? (
-            <p key={index} className="text-destructive">
-              {line.text}
-            </p>
-          ) : (
-            <p key={index} className="whitespace-pre-wrap text-foreground/80">
-              {line.text}
-            </p>
-          ),
-        )}
+          {lines.map((line, index) =>
+            line.kind === "input" ? (
+              <p key={index} className="text-primary">
+                <span className="text-muted-foreground">$ </span>
+                {line.text}
+              </p>
+            ) : line.kind === "error" ? (
+              <p key={index} className="text-destructive">
+                {line.text}
+              </p>
+            ) : (
+              <p key={index} className="whitespace-pre-wrap text-foreground/80">
+                {line.text}
+              </p>
+            ),
+          )}
         </div>
       )}
 
