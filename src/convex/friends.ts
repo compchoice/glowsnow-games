@@ -2,6 +2,7 @@ import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
 import type { Doc, Id } from "./_generated/dataModel";
 import { displayName, getCurrentUser, requireUser } from "./lib";
+import { award } from "./achievements";
 
 /**
  * Friend requests.
@@ -190,6 +191,10 @@ export const respond = mutation({
       status: "accepted",
       respondedAt: Date.now(),
     });
+    // Both sides of a new friendship get the badge.
+    await award(ctx, me, "friend");
+    const other = await ctx.db.get(row.requesterId);
+    if (other) await award(ctx, other, "friend");
     return { accepted: true };
   },
 });

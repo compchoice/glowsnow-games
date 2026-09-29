@@ -8,6 +8,7 @@ import { PageShell } from "@/components/Layout";
 import { MemberAvatar } from "@/components/MemberAvatar";
 import { ModerationActions } from "@/components/ModerationActions";
 import { FriendButton } from "@/components/FriendButton";
+import { BadgeStrip as BadgesStrip } from "@/components/BadgeStrip";
 import { Eyebrow } from "@/components/SiteChrome";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -15,7 +16,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { AVATAR_EMOJI } from "@/lib/avatar";
 import { cn } from "@/lib/utils";
-import { Check, Crown, MessageSquare, Pencil, Shield } from "lucide-react";
+import { Check, Crown, Mail, MessageSquare, Pencil, Shield } from "lucide-react";
 
 const ROLE_LABEL: Record<string, string> = {
   admin: "Owner",
@@ -142,6 +143,14 @@ export default function Profile() {
                 {profile.isSelf ? "Go to the lounge" : "Message them in the lounge"}
               </Link>
             </Button>
+            {!profile.isSelf && (
+              <Button asChild variant="outline" size="sm">
+                <Link to={`/messages?with=${profile._id}`}>
+                  <Mail className="size-4" />
+                  Message privately
+                </Link>
+              </Button>
+            )}
             <FriendButton userId={profile._id} name={profile.name} />
           </div>
         </div>
@@ -158,6 +167,8 @@ export default function Profile() {
           </div>
         ))}
       </dl>
+
+      <BadgesStrip userId={profile._id} />
 
       <div className="mt-6 grid gap-4 lg:grid-cols-[1.3fr_1fr]">
         <Card className="border-border/70 bg-card/60">

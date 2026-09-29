@@ -3,6 +3,7 @@ import { Link, useSearchParams } from "react-router";
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
 import { ChatRoom } from "@/components/ChatRoom";
+import { ThreadPanel } from "@/components/ThreadPanel";
 import { MemberAvatar } from "@/components/MemberAvatar";
 import { useMemberDirectory } from "@/hooks/use-directory";
 import { useCatalog } from "@/hooks/use-catalog";
@@ -96,8 +97,11 @@ export function ChatServer() {
       </aside>
 
       {/* Conversation */}
-      <div className="min-w-0 overflow-hidden rounded-xl border border-border/70">
-        <ChatRoom channel={active.id} topic={active.topic} />
+      <div className="flex min-w-0 flex-col gap-3">
+        <div className="overflow-hidden rounded-xl border border-border/70">
+          <ChatRoom channel={active.id} topic={active.topic} />
+        </div>
+        <ThreadPanel channel={active.id} />
       </div>
 
       {/* Member list */}

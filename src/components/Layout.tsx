@@ -14,7 +14,8 @@ import { MemberCount } from "@/components/MemberCount";
 import { Button } from "@/components/ui/button";
 import { NAV_LINKS, SITE_NAME, SITE_TAGLINE } from "@/lib/site";
 import { cn } from "@/lib/utils";
-import { LogOut, Menu, LayoutDashboard, Lightbulb, Sparkles, X } from "lucide-react";
+import { SiteSearch } from "@/components/SiteSearch";
+import { LogOut, Menu, LayoutDashboard, Lightbulb, Mail, Sparkles, X } from "lucide-react";
 
 /** Snowflakes drifting across the wordmark. Decorative, so hidden from AT. */
 const FLAKES = [
@@ -97,6 +98,11 @@ export function SiteHeader() {
               Staff
             </RouterNavLink>
           )}
+          {isAuthenticated && (
+            <RouterNavLink to="/messages" className={linkClass}>
+              <Mail className="size-4" />
+            </RouterNavLink>
+          )}
           {status?.isAdmin && (
             <RouterNavLink to="/admin" className={linkClass}>
               Admin
@@ -105,6 +111,9 @@ export function SiteHeader() {
         </nav>
 
         <div className="ml-auto flex items-center gap-2">
+          <div className="hidden w-56 lg:block">
+            <SiteSearch />
+          </div>
           <SettingsMenu />
           {isAuthenticated && <NotificationBell />}
           {isAuthenticated ? (

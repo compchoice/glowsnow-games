@@ -6,6 +6,8 @@ import type { Doc, Id } from "@/convex/_generated/dataModel";
 import { useAuth } from "@/hooks/use-auth";
 import { useMemberDirectory } from "@/hooks/use-directory";
 import { MemberAvatar } from "@/components/MemberAvatar";
+import { ReactionBar } from "@/components/ReactionBar";
+import { ReportDialog, type ReportTarget } from "@/components/ReportDialog";
 import { Button } from "@/components/ui/button";
 import {
   CHAT_MAX_BODY,
@@ -73,6 +75,20 @@ export function ChatRoom({
   );
 
   const directory = useMemberDirectory();
+
+  // One reaction query for the whole visible room, rather than one per message.
+  const visibleIds = useMemo(
+    () => (messages ?? []).map((message) => message._id as string),
+    [messages],
+  );
+  const reactions = useQuery(
+    api.reactions.forTargets,
+    visibleIds.length > 0
+      ? { targetType: "chat", targetIds: visibleIds.slice(0, 60) }
+      : "skip",
+  );
+
+  const [reporting, setReporting] = useState<ReportTarget | null>(null);
   const [draft, setDraft] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [pinned, setPinned] = useState(true);
@@ -274,6 +290,21 @@ export function ChatRoom({
                   >
                     {row.message.body}
                   </p>
+                  <ReactionBar
+                    targetType="chat"
+                    targetId={row.message._id}
+                    reactions={reactions?.[row.message._id] ?? []}
+                    onReport={
+                      isAuthenticated && !row.mine
+                        ? () =>
+                            setReporting({
+                              type: "chat",
+                              id: row.message._id,
+                              label: `Report this message from ${row.message.authorName}: “${row.message.body.slice(0, 120)}”`,
+                            })
+                        : undefined
+                    }
+                  />
                 </div>
               </div>
             ),
@@ -367,6 +398,12 @@ export function ChatRoom({
             : "Jump to latest"}
         </button>
       )}
+
+      <ReportDialog
+        target={reporting}
+        open={reporting !== null}
+        onOpenChange={(open) => !open && setReporting(null)}
+      />
     </div>
   );
 }

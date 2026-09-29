@@ -1,6 +1,7 @@
 import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
 import { getCurrentUser, requireUser } from "./lib";
+import { award } from "./achievements";
 
 function cleanSlug(slug: string): string {
   const trimmed = slug.trim().slice(0, 80);
@@ -52,6 +53,16 @@ export const toggle = mutation({
       gameSlug: slug,
       createdAt: Date.now(),
     });
+
+    // Badges for playing and for collecting, counted from the shelf itself so
+    // they cannot be farmed by saving the same game twice.
+    const shelf = await ctx.db
+      .query("favorites")
+      .withIndex("by_user", (q) => q.eq("userId", user._id))
+      .collect();
+    if (shelf.length >= 10) await award(ctx, user, "collector");
+    if (shelf.length >= 3) await award(ctx, user, "arcade");
+
     return { favorited: true };
   },
 });

@@ -4,27 +4,15 @@ import { mutation, query } from "./_generated/server";
 import type { Doc, Id } from "./_generated/dataModel";
 import type { MutationCtx } from "./_generated/server";
 import { displayName, getCurrentUser, requireUser } from "./lib";
+import { CHANNELS, checkChannel, DEFAULT_CHANNEL } from "./channels";
+import { award } from "./achievements";
 import { assertCanParticipate, currentFor } from "./moderation";
 
 const MAX_BODY = 500;
 const DEFAULT_LIMIT = 200;
 const MAX_LIMIT = 400;
-/** Rooms in the server. Kept here so the client can never invent a channel. */
-export const CHANNELS = [
-  { id: "lounge", label: "lounge", topic: "Anything goes" },
-  { id: "games", label: "what-are-we-playing", topic: "Scores, tips, sessions" },
-  { id: "help", label: "help", topic: "Stuck on something?" },
-] as const;
-
-const CHANNEL_IDS = new Set<string>(CHANNELS.map((channel) => channel.id));
-const DEFAULT_CHANNEL = "lounge";
-
-function checkChannel(channel: string): string {
-  if (!CHANNEL_IDS.has(channel)) {
-    throw new Error("That channel does not exist.");
-  }
-  return channel;
-}
+/** Rooms in the server, shared with threads so the two can never drift. */
+export { CHANNELS, checkChannel, DEFAULT_CHANNEL };
 /** How long a heartbeat keeps someone "online". */
 const ONLINE_WINDOW_MS = 25_000;
 /** How long one keystroke keeps someone "typing". */
@@ -224,6 +212,16 @@ export const send = mutation({
 
     // Sending counts as being here, and ends the typing flag.
     await touchPresence(ctx, user, { typing: false });
+
+    // Badges are awarded here rather than on a read path, so playing the site
+    // does the awarding. award() is a no-op once the badge is held.
+    const posted = await ctx.db
+      .query("chatMessages")
+      .withIndex("by_author", (q) => q.eq("authorId", user._id))
+      .collect();
+    if (posted.length >= 1) await award(ctx, user, "first-post");
+    if (posted.length >= 50) await award(ctx, user, "chatter");
+
     return { id };
   },
 });

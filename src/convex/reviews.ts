@@ -1,6 +1,7 @@
 import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
 import { displayName, getCurrentUser, requireUser } from "./lib";
+import { award } from "./achievements";
 
 /**
  * Member reviews for a game. One review per member per game: re-submitting
@@ -99,6 +100,7 @@ export const submit = mutation({
       body: text || undefined,
       createdAt: Date.now(),
     });
+    await award(ctx, user, "reviewer");
     return { id, updated: false };
   },
 });

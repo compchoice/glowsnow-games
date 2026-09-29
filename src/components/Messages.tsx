@@ -7,6 +7,8 @@ import type { Id } from "@/convex/_generated/dataModel";
 import { useAuth } from "@/hooks/use-auth";
 import { useMemberDirectory } from "@/hooks/use-directory";
 import { MemberAvatar } from "@/components/MemberAvatar";
+import { ReactionBar } from "@/components/ReactionBar";
+import { ReportDialog, type ReportTarget } from "@/components/ReportDialog";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
@@ -128,6 +130,20 @@ export function Messages({
   }) as MessageDoc[] | undefined;
   const directory = useMemberDirectory();
 
+  // One reaction query for the page, not one per message.
+  const reactionTargets = useMemo(
+    () => (messages ?? []).map((message) => message._id as string).slice(0, 60),
+    [messages],
+  );
+  const reactions = useQuery(
+    api.reactions.forTargets,
+    reactionTargets.length > 0
+      ? { targetType: "lounge", targetIds: reactionTargets }
+      : "skip",
+  );
+
+  const [reporting, setReporting] = useState<ReportTarget | null>(null);
+
   const [replyTo, setReplyTo] = useState<Id<"messages"> | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -244,6 +260,22 @@ export function Messages({
                       {message.body}
                     </p>
 
+                    <ReactionBar
+                      targetType="lounge"
+                      targetId={message._id}
+                      reactions={reactions?.[message._id] ?? []}
+                      onReport={
+                        isAuthenticated && message.authorId !== user?._id
+                          ? () =>
+                              setReporting({
+                                type: "lounge",
+                                id: message._id,
+                                label: `Report this message from ${nameOf(message)}: “${message.body.slice(0, 120)}”`,
+                              })
+                          : undefined
+                      }
+                    />
+
                     <div className="mt-2 flex flex-wrap items-center gap-3 text-xs">
                       {isAuthenticated && (
                         <button
@@ -346,6 +378,12 @@ export function Messages({
           })}
         </ul>
       )}
+
+      <ReportDialog
+        target={reporting}
+        open={reporting !== null}
+        onOpenChange={(open) => !open && setReporting(null)}
+      />
     </div>
   );
 }

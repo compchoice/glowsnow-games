@@ -5,6 +5,7 @@ import { Eyebrow } from "@/components/SiteChrome";
 import { Button } from "@/components/ui/button";
 import { UserLookup } from "@/components/UserLookup";
 import { ModerationPanel } from "@/components/ModerationPanel";
+import { ReportsPanel } from "@/components/ReportsPanel";
 import { useAuth } from "@/hooks/use-auth";
 import { Link } from "react-router";
 
@@ -71,6 +72,16 @@ export default function Staff() {
       <div className="mt-8 grid gap-4 lg:grid-cols-2">
         <UserLookup />
         <ModerationPanel />
+      </div>
+
+      <div className="mt-8">
+        <h2 className="text-lg font-semibold tracking-tight">Reports</h2>
+        <p className="mt-1 text-sm text-muted-foreground">
+          What members have flagged, and a record of every staff action.
+        </p>
+        <div className="mt-4">
+          <ReportsPanel />
+        </div>
       </div>
     </PageShell>
   );

@@ -29,6 +29,9 @@ const Shelf = lazy(() => import("./pages/Shelf.tsx"));
 const Requests = lazy(() => import("./pages/Requests.tsx"));
 const Restricted = lazy(() => import("./pages/Restricted.tsx"));
 const Staff = lazy(() => import("./pages/Staff.tsx"));
+const Messages = lazy(() => import("./pages/Messages.tsx"));
+const Polls = lazy(() => import("./pages/Polls.tsx"));
+const Leaderboard = lazy(() => import("./pages/Leaderboard.tsx"));
 const Profile = lazy(() => import("./pages/Profile.tsx"));
 const Dashboard = lazy(() => import("./pages/Dashboard.tsx"));
 const Admin = lazy(() => import("./pages/Admin.tsx"));
@@ -57,6 +60,19 @@ createRoot(document.getElementById("root")!).render(
               <Route path="/proxy" element={<ProxyPage />} />
               <Route path="/community" element={<Community />} />
               <Route path="/chat" element={<Chat />} />
+              <Route path="/polls" element={<Polls />} />
+              <Route path="/leaderboard" element={<Leaderboard />} />
+              <Route
+                path="/messages"
+                element={
+                  <RequireAuth
+                    title="Sign in to read your messages"
+                    description="Private conversations belong to your account."
+                  >
+                    <Messages />
+                  </RequireAuth>
+                }
+              />
               <Route path="/u/:userId" element={<Profile />} />
               <Route path="/requests" element={<Requests />} />
               <Route path="/restricted" element={<Restricted />} />

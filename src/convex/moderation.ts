@@ -13,6 +13,7 @@ import {
   roleRank,
 } from "./lib";
 import { ROLES } from "./schema";
+import { recordAction } from "./reports";
 import { describeDuration, timeLeft } from "./duration";
 
 const MAX_REASON = 140;
@@ -226,6 +227,7 @@ export const kick = mutation({
       by: moderator._id,
       createdAt: Date.now(),
     });
+    await recordAction(ctx, moderator, "kicked-member", userId, trimmed || describeDuration(capped));
     return { ok: true, until, label: describeDuration(capped) };
   },
 });
@@ -254,6 +256,7 @@ export const ban = mutation({
       by: admin._id,
       createdAt: Date.now(),
     });
+    await recordAction(ctx, admin, "banned-member", userId, trimmed);
     return { ok: true };
   },
 });
@@ -290,6 +293,7 @@ export const timeout = mutation({
       by: moderator._id,
       createdAt: Date.now(),
     });
+    await recordAction(ctx, moderator, "silenced-member", userId, trimmed || describeDuration(capped));
     return { ok: true, until: Date.now() + capped, label: describeDuration(capped) };
   },
 });
@@ -309,6 +313,13 @@ export const clear = mutation({
       throw new Error("That member is not moderated.");
     }
     await ctx.db.delete(existing._id);
+    await recordAction(
+      ctx,
+      moderator,
+      `lifted-${existing.kind}`,
+      userId,
+      existing.reason,
+    );
     return { ok: true };
   },
 });
