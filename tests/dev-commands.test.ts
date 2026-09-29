@@ -1,9 +1,13 @@
 import { describe, expect, test } from "bun:test";
 import {
+  COMMAND_ALIASES,
   COMMAND_GROUPS,
   DEV_COMMANDS,
+  canonicalCommand,
   commandLine,
   commandsIn,
+  completeCommand,
+  suggestionsFor,
 } from "../src/lib/dev-commands";
 import { NAV_LINKS, SECONDARY_LINKS } from "../src/lib/site";
 
@@ -73,6 +77,74 @@ describe("navigation", () => {
     for (const link of [...NAV_LINKS, ...SECONDARY_LINKS]) {
       expect(link.label.length).toBeGreaterThan(0);
       expect(link.to.startsWith("/")).toBe(true);
+    }
+  });
+});
+
+describe("command completion", () => {
+  test("an exact name resolves to itself", () => {
+    expect(canonicalCommand("help")).toBe("help");
+    expect(canonicalCommand("KICK")).toBe("kick");
+  });
+
+  test("aliases resolve to the command they run", () => {
+    expect(canonicalCommand("who")).toBe("check");
+    expect(canonicalCommand("msg")).toBe("dm");
+    expect(canonicalCommand("unmute")).toBe("unban");
+  });
+
+  test("an unknown word resolves to nothing rather than guessing", () => {
+    expect(canonicalCommand("zzz")).toBeNull();
+  });
+
+  test("a prefix offers every command that starts with it", () => {
+    expect(suggestionsFor("un").map((c) => c.cmd).sort()).toEqual([
+      "unannounce",
+      "unban",
+      "unpoll",
+    ]);
+  });
+
+  test("an exact alias offers only the command it means", () => {
+    expect(suggestionsFor("who").map((c) => c.cmd)).toEqual(["check"]);
+  });
+
+  test("nothing is offered for an empty or unmatched token", () => {
+    expect(suggestionsFor("")).toEqual([]);
+    expect(suggestionsFor("qqq")).toEqual([]);
+  });
+
+  test("Tab completes to the shared prefix of every match", () => {
+    // unban / unannounce / unpoll all start "un", so the first Tab adds "n".
+    expect(completeCommand("u")).toBe("un");
+  });
+
+  test("Tab fills the whole word when only one command matches", () => {
+    expect(completeCommand("kic")).toBe("kick");
+    expect(completeCommand("rep")).toBe("reports");
+  });
+
+  test("Tab does nothing once the token is already a whole command", () => {
+    expect(completeCommand("kick")).toBeNull();
+    expect(completeCommand("mute")).toBeNull();
+    expect(completeCommand("help")).toBeNull();
+  });
+
+  test("Tab does nothing when nothing matches", () => {
+    expect(completeCommand("qqq")).toBeNull();
+  });
+
+  test("no alias shadows a real command name", () => {
+    // `mute` is a listed command that also runs `timeout`; the switch handles
+    // that. An alias entry for it would be dead code that reads as a bug.
+    for (const alias of Object.keys(COMMAND_ALIASES)) {
+      expect(DEV_COMMANDS.some((command) => command.cmd === alias)).toBe(false);
+    }
+  });
+
+  test("every alias points at a command that exists", () => {
+    for (const target of Object.values(COMMAND_ALIASES)) {
+      expect(DEV_COMMANDS.some((command) => command.cmd === target)).toBe(true);
     }
   });
 });

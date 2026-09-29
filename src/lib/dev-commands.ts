@@ -74,3 +74,72 @@ export function commandsIn(group: CommandGroup): CommandSpec[] {
 export function commandLine(command: CommandSpec): string {
   return `${command.cmd}${command.args ? ` ${command.args}` : ""}`;
 }
+
+/**
+ * Shorthand the console accepts, so `mute` reaches `timeout` and `who` reaches
+ * `check`. Kept beside the command list rather than in the switch, so the
+ * completion below can offer the same names the switch actually runs.
+ */
+export const COMMAND_ALIASES: Record<string, string> = {
+  moderation: "mods",
+  who: "check",
+  bg: "wallpaper",
+  unmute: "unban",
+  untimeout: "unban",
+  msg: "dm",
+  open: "go",
+  channels: "rooms",
+  leaderboard: "rank",
+  find: "search",
+};
+
+/** The real command a token refers to, whether it is a name or an alias. */
+export function canonicalCommand(token: string): string | null {
+  const text = token.trim().toLowerCase();
+  if (!text) return null;
+  if (DEV_COMMANDS.some((command) => command.cmd === text)) return text;
+  return COMMAND_ALIASES[text] ?? null;
+}
+
+/**
+ * Commands a half-typed token could mean. An exact alias resolves to just that
+ * one command, so typing `mute` offers `timeout` rather than every `mu*` word.
+ */
+export function suggestionsFor(prefix: string, limit = 6): CommandSpec[] {
+  const text = prefix.trim().toLowerCase();
+  if (!text) return [];
+
+  const exact = canonicalCommand(text);
+  if (exact) {
+    return DEV_COMMANDS.filter((command) => command.cmd === exact).slice(0, limit);
+  }
+
+  return DEV_COMMANDS.filter((command) => command.cmd.startsWith(text)).slice(
+    0,
+    limit,
+  );
+}
+
+/**
+ * What Tab should insert: the longest prefix every match shares. Returns null
+ * when the token is already a whole command, so Tab never retypes the same
+ * thing the user already did.
+ */
+export function completeCommand(prefix: string): string | null {
+  const text = prefix.trim().toLowerCase();
+  if (!text) return null;
+  if (canonicalCommand(text)) return null;
+
+  const names = DEV_COMMANDS.map((command) => command.cmd).filter((name) =>
+    name.startsWith(text),
+  );
+  if (names.length === 0) return null;
+
+  let common = names[0];
+  for (const name of names) {
+    while (!name.startsWith(common)) {
+      common = common.slice(0, -1);
+    }
+  }
+  return common === text ? null : common;
+}

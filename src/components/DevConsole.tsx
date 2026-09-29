@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router";
 import { useAuth } from "@/hooks/use-auth";
 import { useConvex, useMutation, useQuery } from "convex/react";
@@ -6,7 +6,7 @@ import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
 import { devStore, useDevTools } from "@/lib/dev-store";
 import { setCloak } from "@/lib/cloak";
-import { COMMAND_GROUPS, commandLine, commandsIn } from "@/lib/dev-commands";
+import { COMMAND_GROUPS, commandLine, commandsIn, completeCommand, suggestionsFor } from "@/lib/dev-commands";
 import { achievementByKey, validatePoll } from "@/lib/engagement";
 import { DEFAULT_GAMES } from "@/lib/catalog";
 import { ACCENTS, FONTS, WALLPAPERS, themeStore } from "@/lib/theme";
@@ -992,7 +992,30 @@ export function DevConsole() {
     });
   }
 
+  /**
+   * What the user has typed so far is a command name only while there is no
+   * space in it. Everything else is an argument, which we leave alone.
+   */
+  const typedToken = value.includes(" ") ? "" : value;
+  const matches = useMemo(() => suggestionsFor(typedToken), [typedToken]);
+  const tabTarget = useMemo(() => completeCommand(typedToken), [typedToken]);
+
   function handleKeyDown(event: React.KeyboardEvent<HTMLInputElement>) {
+    if (event.key === "Tab") {
+      event.preventDefault();
+      // Only complete the command name itself. Once there is a space the user
+      // is typing an argument, and guessing at those would be in the way.
+      if (value.includes(" ")) return;
+      const filled = completeCommand(value);
+      if (filled) {
+        setValue(filled);
+        return;
+      }
+      // A unique match gets a trailing space so they can carry straight on.
+      if (matches.length === 1) setValue(`${matches[0].cmd} `);
+      return;
+    }
+
     if (event.key === "ArrowUp") {
       event.preventDefault();
       if (history.length === 0) return;
@@ -1091,6 +1114,31 @@ export function DevConsole() {
               </p>
             ),
           )}
+        </div>
+      )}
+
+      {matches.length > 0 && (
+        <div className="shrink-0 border-t border-border/70 px-2 py-1.5">
+          <div className="flex flex-wrap items-center gap-1">
+            {tabTarget && tabTarget !== typedToken && (
+              <span className="mr-1 text-[11px] text-muted-foreground">
+                Tab for
+              </span>
+            )}
+            {matches.map((command) => (
+              <button
+                key={command.cmd}
+                type="button"
+                // Clicking fills the whole example, so a staff member does not
+                // have to remember the arguments.
+                onClick={() => setValue(commandLine(command))}
+                title={command.desc}
+                className="rounded border border-border/70 px-1.5 py-0.5 font-mono text-[11px] text-muted-foreground transition-colors hover:border-primary/40 hover:text-foreground"
+              >
+                {command.cmd}
+              </button>
+            ))}
+          </div>
         </div>
       )}
 
