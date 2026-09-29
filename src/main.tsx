@@ -121,11 +121,13 @@ createRoot(document.getElementById("root")!).render(
               <Route path="*" element={<NotFound />} />
             </Routes>
           </Suspense>
+          {/* Inside the Router: the console's `go` and `play` commands use
+              useNavigate, which throws if it renders outside one. */}
+          <DevConsole />
         </BrowserRouter>
         <Toaster />
         <SiteEffects />
         <SnowfallMount />
-        <DevConsole />
       </ConvexAuthProvider>
     </RootErrorBoundary>
   </StrictMode>,
