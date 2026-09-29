@@ -9,6 +9,7 @@ import { CloakMenu, SnowToggle } from "@/components/SiteChrome";
 import { ThemeMenu } from "@/components/ThemeMenu";
 import { NotificationBell } from "@/components/NotificationBell";
 import { MemberAvatar } from "@/components/MemberAvatar";
+import { MemberCount } from "@/components/MemberCount";
 import { Button } from "@/components/ui/button";
 import { NAV_LINKS, SITE_NAME, SITE_TAGLINE } from "@/lib/site";
 import { cn } from "@/lib/utils";
@@ -226,9 +227,15 @@ export function SiteFooter() {
         </div>
       </div>
 
-      <div className="border-t border-border/70 py-4 text-center text-xs text-muted-foreground">
-        {new Date().getFullYear()} {SITE_NAME} · press <kbd className="rounded border border-border/70 bg-muted px-1 py-0.5">Esc</kbd>{" "}
-        to disguise the tab
+      <div className="flex flex-wrap items-center justify-center gap-x-3 gap-y-2 border-t border-border/70 py-4 text-center text-xs text-muted-foreground">
+        <MemberCount />
+        <span>
+          {new Date().getFullYear()} {SITE_NAME} · press{" "}
+          <kbd className="rounded border border-border/70 bg-muted px-1 py-0.5">
+            Esc
+          </kbd>{" "}
+          to disguise the tab
+        </span>
       </div>
     </footer>
   );

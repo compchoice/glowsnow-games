@@ -100,6 +100,19 @@ export const directory = query({
   },
 });
 
+/**
+ * How many accounts exist, for the member count in the footer. The users table
+ * stays small on a site this size, so a plain count is cheaper than a paginate
+ * with no `totalCount` available.
+ */
+export const count = query({
+  args: {},
+  handler: async (ctx) => {
+    const users = await ctx.db.query("users").collect();
+    return users.length;
+  },
+});
+
 /** Update your own public profile. */
 export const update = mutation({
   args: {
