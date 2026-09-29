@@ -1,17 +1,20 @@
 import { useEffect, useRef, useState } from "react";
+import { useNavigate } from "react-router";
+import { useAuth } from "@/hooks/use-auth";
 import { useConvex, useMutation, useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
 import { devStore, useDevTools } from "@/lib/dev-store";
 import { setCloak } from "@/lib/cloak";
 import { COMMAND_GROUPS, commandLine, commandsIn } from "@/lib/dev-commands";
-import { achievementByKey } from "@/lib/engagement";
+import { achievementByKey, validatePoll } from "@/lib/engagement";
+import { DEFAULT_GAMES } from "@/lib/catalog";
 import { ACCENTS, FONTS, WALLPAPERS, themeStore } from "@/lib/theme";
 import { onConsoleCommand } from "@/lib/console-bridge";
 import { findMember, searchMembers, type MemberLike } from "@/lib/members";
 import { describeDuration, parseDuration } from "@/convex/duration";
 import { SITE_NAME, TAB_PRESETS } from "@/lib/site";
-import { Terminal, X } from "lucide-react";
+import { ChevronDown, ChevronUp, Terminal, X } from "lucide-react";
 
 const ROLES = ["member", "user", "moderator", "admin"] as const;
 type RoleName = (typeof ROLES)[number];
@@ -30,6 +33,20 @@ type RoomInfo = { readonly id: string; readonly label: string; readonly topic: s
 /** The channel list is a compile-time constant upstream, so it arrives frozen. */
 type RoomList = readonly RoomInfo[];
 type SearchHit = { kind: string; title: string; detail: string; href: string };
+type ReportRow = {
+  _id: Id<"reports">;
+  reason: string;
+  targetType: string;
+  targetId: string;
+  reporterName: string;
+};
+type PollRow = {
+  _id: Id<"polls">;
+  question: string;
+  options: string[];
+  total: number;
+  closed: boolean;
+};
 
 type Line = { kind: "input" | "output" | "error" | "clear"; text: string };
 
@@ -80,6 +97,7 @@ type CommandContext = {
     linkLabel?: string;
   }) => Promise<unknown>;
   clearAnnouncement: (args: Record<string, never>) => Promise<unknown>;
+  resolveReport: (args: { reportId: Id<"reports"> }) => Promise<unknown>;
   /**
    * Read-only data for the informational commands. Held in one object so the
    * mutation surface above stays readable, and so it is obvious which fields
@@ -96,6 +114,18 @@ type CommandContext = {
   search: (args: { query: string }) => Promise<
     { hits: SearchHit[] } | undefined
   >;
+  /** Where the console sends you. Paths only, always checked first. */
+  navigate: (path: string) => void;
+  /** The signed-in member's own id. */
+  userId: string | undefined;
+  sendDm: (args: { partnerId: string; body: string }) => Promise<unknown>;
+  updateProfile: (args: { name?: string; bio?: string }) => Promise<unknown>;
+  createPoll: (args: { question: string; options: string[] }) => Promise<unknown>;
+  closePoll: (args: { pollId: Id<"polls"> }) => Promise<unknown>;
+  /** Open reports, so they can be listed and answered by number. */
+  openReports: ReportRow[] | undefined;
+  /** Recent polls, same idea. */
+  openPolls: PollRow[] | undefined;
 };
 
 function describeError(error: unknown, fallback: string) {
@@ -586,6 +616,224 @@ async function runCommand(raw: string, ctx: CommandContext) {
       break;
     }
 
+    case "go":
+    case "open": {
+      const path = args[0] ?? "";
+      // Only in-site paths. A console command should never be able to bounce
+      // somebody to another origin.
+      if (!path.startsWith("/")) {
+        println({
+          kind: "error",
+          text: "Usage: go /games — a path on this site, starting with /",
+        });
+        break;
+      }
+      ctx.navigate(path);
+      println({ kind: "output", text: `Went to ${path}.` });
+      break;
+    }
+
+    case "play": {
+      const wanted = (args[0] ?? "").trim().toLowerCase();
+      if (!wanted) {
+        println({ kind: "error", text: "Usage: play granny" });
+        break;
+      }
+      const match =
+        DEFAULT_GAMES.find((game) => game.slug === wanted) ??
+        DEFAULT_GAMES.find(
+          (game) =>
+            game.title.toLowerCase() === wanted ||
+            game.title.toLowerCase().includes(wanted),
+        );
+      if (!match) {
+        println({ kind: "error", text: `No game called “${wanted}”.` });
+        break;
+      }
+      ctx.navigate(`/games/${match.slug}`);
+      println({ kind: "output", text: `Opening ${match.title}.` });
+      break;
+    }
+
+    case "games": {
+      println({ kind: "output", text: `${DEFAULT_GAMES.length} games in the catalog:` });
+      for (const game of DEFAULT_GAMES) {
+        println({
+          kind: "output",
+          text: `  ${game.slug} — ${game.title}${game.external ? " (new tab)" : ""}`,
+        });
+      }
+      break;
+    }
+
+    case "id": {
+      if (!ctx.userId) {
+        println({ kind: "error", text: "You are not signed in." });
+        break;
+      }
+      println({ kind: "output", text: `Your id: ${ctx.userId}` });
+      println({ kind: "output", text: `Profile: /u/${ctx.userId}` });
+      break;
+    }
+
+    case "nick": {
+      const name = args.join(" ");
+      if (!name) {
+        println({ kind: "error", text: "Usage: nick <new name>" });
+        break;
+      }
+      try {
+        await ctx.updateProfile({ name });
+        println({ kind: "output", text: `Name set to “${name}”.` });
+      } catch (error) {
+        println({ kind: "error", text: describeError(error, "Could not change that.") });
+      }
+      break;
+    }
+
+    case "bio": {
+      const bio = args.join(" ");
+      try {
+        await ctx.updateProfile({ bio });
+        println({ kind: "output", text: "Bio updated." });
+      } catch (error) {
+        println({ kind: "error", text: describeError(error, "Could not change that.") });
+      }
+      break;
+    }
+
+    case "dm":
+    case "msg": {
+      if (!ctx.isModerator && !ctx.userId) {
+        println({ kind: "error", text: "Sign in to send messages." });
+        break;
+      }
+      const target = args[0];
+      const text = args.slice(1).join(" ");
+      if (!target || !text) {
+        println({ kind: "error", text: "Usage: dm ana see you in chat" });
+        break;
+      }
+      const partner = findMember(target, ctx.members);
+      if (!partner) {
+        const close = searchMembers(target, ctx.members).slice(0, 3);
+        println({
+          kind: "error",
+          text: close.length
+            ? `No member matches “${target}”. Did you mean: ${close.map((m) => m.name).join(", ")}?`
+            : `No member matches “${target}”.`,
+        });
+        break;
+      }
+      try {
+        await ctx.sendDm({ partnerId: partner._id, body: text });
+        println({ kind: "output", text: `Message sent to ${partner.name}.` });
+      } catch (error) {
+        println({ kind: "error", text: describeError(error, "Could not send that.") });
+      }
+      break;
+    }
+
+    case "reports": {
+      if (!ctx.isModerator) {
+        println({ kind: "error", text: "You need moderator access to do that." });
+        break;
+      }
+      const rows = ctx.openReports ?? [];
+      if (rows.length === 0) {
+        println({ kind: "output", text: "Nothing reported. Long may it last." });
+        break;
+      }
+      rows.slice(0, 15).forEach((row, index) => {
+        println({
+          kind: "output",
+          text: `  ${index + 1}. ${row.reason} — ${row.targetType} from ${row.reporterName}`,
+        });
+      });
+      println({ kind: "output", text: "Answer one with: resolve <number>" });
+      break;
+    }
+
+    case "resolve": {
+      if (!ctx.isModerator) {
+        println({ kind: "error", text: "You need moderator access to do that." });
+        break;
+      }
+      const position = Number(args[0]);
+      const row = ctx.openReports?.[position - 1];
+      if (!row) {
+        println({ kind: "error", text: "There is no report at that number." });
+        break;
+      }
+      try {
+        await ctx.resolveReport({ reportId: row._id });
+        println({ kind: "output", text: `Marked report ${position} as handled.` });
+      } catch (error) {
+        println({ kind: "error", text: describeError(error, "Could not do that.") });
+      }
+      break;
+    }
+
+    case "polls": {
+      const rows = ctx.openPolls ?? [];
+      if (rows.length === 0) {
+        println({ kind: "output", text: "No polls yet." });
+        break;
+      }
+      rows.slice(0, 10).forEach((row, index) => {
+        println({
+          kind: "output",
+          text: `  ${index + 1}. ${row.question} — ${row.total} votes${row.closed ? " (closed)" : ""}`,
+        });
+      });
+      println({ kind: "output", text: "Close one with: unpoll <number>" });
+      break;
+    }
+
+    case "poll": {
+      if (!ctx.userId) {
+        println({ kind: "error", text: "Sign in to start a poll." });
+        break;
+      }
+      // `poll Which game? | Granny | Blox Fruits` — the pipe separates the
+      // choices, because a positional argument list cannot hold punctuation.
+      const parts = raw.split("|").map((part: string) => part.trim());
+      const question = parts[0]?.replace(/^\s*poll\s+/i, "").trim() ?? "";
+      const options = parts.slice(1).filter(Boolean);
+      const check = validatePoll(question, options);
+      if (!check.ok) {
+        println({ kind: "error", text: check.error });
+        println({ kind: "output", text: 'Usage: poll Which game? | Granny | Blox Fruits' });
+        break;
+      }
+      try {
+        await ctx.createPoll({ question, options: check.options });
+        println({ kind: "output", text: "Poll posted." });
+      } catch (error) {
+        println({ kind: "error", text: describeError(error, "Could not post that poll.") });
+      }
+      break;
+    }
+
+    case "unpoll": {
+      const position = Number(args[0]);
+      const row = ctx.openPolls?.[position - 1];
+      if (!row) {
+        println({ kind: "error", text: "There is no poll at that number." });
+        break;
+      }
+      try {
+        await ctx.closePoll({ pollId: row._id });
+        println({ kind: "output", text: "Poll closed." });
+      } catch (error) {
+        println({
+          kind: "error",
+          text: describeError(error, "Only its author or staff can close that poll."),
+        });
+      }
+      break;
+    }
+
     case "clear":
       println({ kind: "clear", text: "" });
       break;
@@ -613,6 +861,8 @@ export function DevConsole() {
     { kind: "output", text: `${SITE_NAME} developer console. Type help to begin.` },
   ]);
   const [value, setValue] = useState("");
+  /** Hides the output so the console is just a prompt line. */
+  const [collapsed, setCollapsed] = useState(false);
   const [history, setHistory] = useState<string[]>([]);
   const [historyIndex, setHistoryIndex] = useState<number | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -621,6 +871,7 @@ export function DevConsole() {
   const open = state.devConsoleOpen;
 
   const status = useQuery(api.users.adminStatus);
+  const { user } = useAuth();
   const directory = useQuery(api.profiles.directory);
   const moderation = useQuery(
     api.moderation.list,
@@ -634,6 +885,20 @@ export function DevConsole() {
   const setRole = useMutation(api.users.setRole);
   const setAnnouncement = useMutation(api.announcements.set);
   const clearAnnouncement = useMutation(api.announcements.clear);
+  const resolveReport = useMutation(api.reports.resolve);
+  const sendDm = useMutation(api.dms.send);
+  const updateProfile = useMutation(api.profiles.update);
+  const createPoll = useMutation(api.polls.create);
+  const closePoll = useMutation(api.polls.close);
+  const navigate = useNavigate();
+
+  // Staff-only reads are skipped rather than fetched, so a member never
+  // triggers a query the server would reject.
+  const openReports = useQuery(
+    api.reports.queue,
+    status?.isModerator ? {} : "skip",
+  );
+  const openPolls = useQuery(api.polls.list, open ? {} : "skip");
 
   // Read-only data for the new informational commands. Staff-only queries are
   // skipped rather than fetched, so a member never triggers a rejected query.
@@ -705,6 +970,15 @@ export function DevConsole() {
       members: directory ?? [],
       info: { audit, online, leaderboard, badges, rooms },
       search: (args) => convex.query(api.search.all, args),
+      navigate,
+      userId: user?._id,
+      sendDm,
+      updateProfile,
+      createPoll,
+      closePoll,
+      resolveReport,
+      openReports,
+      openPolls,
       isAdmin: status?.isAdmin ?? false,
       isModerator: status?.isModerator ?? false,
       moderation,
@@ -764,27 +1038,43 @@ export function DevConsole() {
   return (
     <div
       data-dev-console=""
-      className="fixed bottom-4 left-4 z-50 flex h-72 w-[min(24rem,calc(100vw-2rem))] flex-col overflow-hidden rounded-xl border border-border/70 bg-card/95 text-sm backdrop-blur-md"
+      // On a phone this is a wide, short strip rather than a tall panel, so it
+      // does not swallow the page. From sm up it goes back to a floating card.
+      className="fixed inset-x-3 bottom-3 z-50 flex max-h-[60dvh] flex-col overflow-hidden rounded-xl border border-border/70 bg-card/95 text-sm backdrop-blur-md sm:inset-x-auto sm:bottom-4 sm:left-4 sm:h-72 sm:w-[min(24rem,calc(100vw-2rem))]"
     >
-      <div className="flex items-center justify-between border-b border-border/70 bg-muted/40 px-3 py-2">
+      <div className="flex shrink-0 items-center justify-between border-b border-border/70 bg-muted/40 px-3 py-2">
         <div className="flex items-center gap-2 text-xs font-medium text-muted-foreground">
           <Terminal className="size-3.5 text-primary" />
           dev console
         </div>
-        <button
-          type="button"
-          onClick={() => setState({ devConsoleOpen: false })}
-          className="text-muted-foreground transition-colors hover:text-foreground"
-          aria-label="Close the console"
-        >
-          <X className="size-4" />
-        </button>
+        <div className="flex items-center gap-1">
+          {/* Collapsing leaves just the prompt, which is what you want when
+              you are checking one value and getting back to the page. */}
+          <button
+            type="button"
+            onClick={() => setCollapsed((value) => !value)}
+            className="text-muted-foreground transition-colors hover:text-foreground"
+            aria-label={collapsed ? "Expand the console" : "Collapse the console"}
+            aria-expanded={!collapsed}
+          >
+            {collapsed ? <ChevronUp className="size-4" /> : <ChevronDown className="size-4" />}
+          </button>
+          <button
+            type="button"
+            onClick={() => setState({ devConsoleOpen: false })}
+            className="text-muted-foreground transition-colors hover:text-foreground"
+            aria-label="Close the console"
+          >
+            <X className="size-4" />
+          </button>
+        </div>
       </div>
 
-      <div
-        ref={scrollRef}
-        className="flex-1 space-y-1 overflow-y-auto px-3 py-2 font-mono text-xs leading-5"
-      >
+      {!collapsed && (
+        <div
+          ref={scrollRef}
+          className="min-h-0 flex-1 space-y-1 overflow-y-auto px-3 py-2 font-mono text-xs leading-5"
+        >
         {lines.map((line, index) =>
           line.kind === "input" ? (
             <p key={index} className="text-primary">
@@ -801,11 +1091,12 @@ export function DevConsole() {
             </p>
           ),
         )}
-      </div>
+        </div>
+      )}
 
       <form
         onSubmit={handleSubmit}
-        className="flex items-center gap-2 border-t border-border/70 px-3 py-2"
+        className="flex shrink-0 items-center gap-2 border-t border-border/70 px-3 py-2"
       >
         <span className="font-mono text-xs text-muted-foreground">$</span>
         <input
