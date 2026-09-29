@@ -36,6 +36,14 @@ export const friendshipStatusValidator = v.union(
   v.literal("accepted"),
 );
 
+/** Where a feature request has got to. */
+export const requestStatusValidator = v.union(
+  v.literal("open"),
+  v.literal("planned"),
+  v.literal("done"),
+  v.literal("declined"),
+);
+
 const schema = defineSchema(
   {
     // default auth tables using convex auth.
@@ -134,6 +142,30 @@ const schema = defineSchema(
       by: v.optional(v.id("users")),
       createdAt: v.number(),
     }).index("by_user", ["userId"]),
+
+    // What members would like built, and the owner's replies.
+    requests: defineTable({
+      authorId: v.id("users"),
+      authorName: v.string(),
+      title: v.string(),
+      body: v.string(),
+      status: requestStatusValidator,
+      createdAt: v.number(),
+      updatedAt: v.optional(v.number()),
+    })
+      .index("by_createdAt", ["createdAt"])
+      .index("by_status", ["status", "createdAt"]),
+
+    // Only moderators and the owner can leave a reply on a request.
+    requestComments: defineTable({
+      requestId: v.id("requests"),
+      authorId: v.id("users"),
+      authorName: v.string(),
+      /** Snapshotted so a reply still reads as "Owner" if the role later changes. */
+      authorRole: v.string(),
+      body: v.string(),
+      createdAt: v.number(),
+    }).index("by_request", ["requestId", "createdAt"]),
 
     // Who is in the chat right now, and who is mid-sentence. One row per user.
     chatPresence: defineTable({

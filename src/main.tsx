@@ -26,6 +26,7 @@ const ProxyPage = lazy(() => import("./pages/Proxy.tsx"));
 const Community = lazy(() => import("./pages/Community.tsx"));
 const Chat = lazy(() => import("./pages/Chat.tsx"));
 const Shelf = lazy(() => import("./pages/Shelf.tsx"));
+const Requests = lazy(() => import("./pages/Requests.tsx"));
 const Profile = lazy(() => import("./pages/Profile.tsx"));
 const Dashboard = lazy(() => import("./pages/Dashboard.tsx"));
 const Admin = lazy(() => import("./pages/Admin.tsx"));
@@ -55,6 +56,7 @@ createRoot(document.getElementById("root")!).render(
               <Route path="/community" element={<Community />} />
               <Route path="/chat" element={<Chat />} />
               <Route path="/u/:userId" element={<Profile />} />
+              <Route path="/requests" element={<Requests />} />
               <Route
                 path="/shelf"
                 element={

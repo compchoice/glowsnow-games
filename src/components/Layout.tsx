@@ -13,7 +13,7 @@ import { MemberCount } from "@/components/MemberCount";
 import { Button } from "@/components/ui/button";
 import { NAV_LINKS, SITE_NAME, SITE_TAGLINE } from "@/lib/site";
 import { cn } from "@/lib/utils";
-import { LogOut, Menu, LayoutDashboard, Sparkles, X } from "lucide-react";
+import { LogOut, Menu, LayoutDashboard, Lightbulb, Sparkles, X } from "lucide-react";
 
 /** Snowflakes drifting across the wordmark. Decorative, so hidden from AT. */
 const FLAKES = [
@@ -197,9 +197,14 @@ export function SiteHeader() {
 }
 
 export function SiteFooter() {
+  const requests = useQuery(api.requests.list);
+
+  const open = (requests ?? []).filter((row) => row.status === "open").length;
+  const latest = (requests ?? []).slice(0, 2);
+
   return (
     <footer className="mt-20 border-t border-border/70 bg-card/40">
-      <div className="mx-auto grid w-full max-w-6xl gap-10 px-4 py-10 sm:px-6 md:grid-cols-[1.4fr_1fr]">
+      <div className="mx-auto grid w-full max-w-6xl gap-10 px-4 py-10 sm:px-6 md:grid-cols-[1.4fr_1fr_1fr]">
         <div>
           <Brand />
           <p className="mt-3 max-w-sm text-sm text-muted-foreground">
@@ -222,6 +227,32 @@ export function SiteFooter() {
               Dashboard
             </Link>
           </div>
+        </div>
+
+        <div>
+          <p className="text-xs font-medium uppercase tracking-[0.2em] text-muted-foreground">
+            Suggestions
+          </p>
+          <p className="mt-2 text-sm text-muted-foreground">
+            Want a game added, or a bit of the interface changed? Ask on the
+            board — moderators and the owner reply there.
+          </p>
+          {latest.map((row) => (
+            <Link
+              key={row._id}
+              to="/requests"
+              className="mt-2 block truncate text-sm text-muted-foreground transition-colors hover:text-foreground"
+            >
+              {row.status === "done" ? "✓ " : ""}
+              {row.title}
+            </Link>
+          ))}
+          <Button asChild size="sm" variant="outline" className="mt-3">
+            <Link to="/requests">
+              <Lightbulb className="size-4" />
+              {open > 0 ? `${open} open` : "Ask for something"}
+            </Link>
+          </Button>
         </div>
 
         <div>
