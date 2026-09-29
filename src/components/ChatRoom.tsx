@@ -15,7 +15,7 @@ import {
   typingLabel,
 } from "@/lib/chat";
 import { cn } from "@/lib/utils";
-import { ArrowDown, Loader2, MessageSquare, Send } from "lucide-react";
+import { ArrowDown, Hash, Loader2, Send } from "lucide-react";
 
 const HEARTBEAT_MS = 8_000;
 const TYPING_THROTTLE_MS = 1_500;
@@ -40,9 +40,15 @@ function echoMessage(
   };
 }
 
-export function ChatRoom() {
+export function ChatRoom({
+  channel,
+  topic,
+}: {
+  channel: string;
+  topic: string;
+}) {
   const { user, isAuthenticated, isLoading } = useAuth();
-  const messages = useQuery(api.chat.list, {});
+  const messages = useQuery(api.chat.list, { channel });
   const presence = useQuery(api.chat.presence, {});
   const heartbeat = useMutation(api.chat.heartbeat);
   const leave = useMutation(api.chat.leave);
@@ -55,10 +61,10 @@ export function ChatRoom() {
   const send = useMutation(api.chat.send).withOptimisticUpdate(
     (localStore, args) => {
       if (!user) return;
-      const existing = localStore.getQuery(api.chat.list, {});
+      const existing = localStore.getQuery(api.chat.list, { channel });
       if (existing === undefined) return;
 
-      localStore.setQuery(api.chat.list, {}, [
+      localStore.setQuery(api.chat.list, { channel }, [
         ...existing,
         echoMessage(user, args.body.trim()),
       ]);
@@ -119,7 +125,7 @@ export function ChatRoom() {
     setDraft("");
     setPinned(true);
     try {
-      await send({ body });
+      await send({ body, channel });
     } catch (sendError) {
       setError(
         sendError instanceof Error ? sendError.message : "That didn't send.",
@@ -146,26 +152,19 @@ export function ChatRoom() {
   const draftRows = Math.min(4, Math.max(1, draft.split("\n").length));
 
   return (
-    <div className="relative flex h-[calc(100dvh-16rem)] min-h-[26rem] flex-col overflow-hidden rounded-xl border border-border/70 bg-card/50">
+    <div className="relative flex h-[calc(100dvh-14rem)] min-h-[26rem] flex-col overflow-hidden bg-card/50">
       {/* Room header */}
       <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border/70 px-4 py-2.5">
-        <div className="flex items-center gap-2">
-          <MessageSquare className="size-4 text-primary" />
-          <span className="text-sm font-medium">Lounge chat</span>
-          <span className="text-xs text-muted-foreground">
-            {presence === undefined
-              ? "connecting…"
-              : `${presence.onlineCount} online`}
-          </span>
+        <div className="flex min-w-0 items-center gap-2">
+          <Hash className="size-4 shrink-0 text-muted-foreground" />
+          <span className="truncate text-sm font-medium">{channel}</span>
+          <span className="truncate text-xs text-muted-foreground">{topic}</span>
         </div>
-        {presence && presence.onlineCount > 0 && (
-          <span
-            className="hidden max-w-[55%] truncate text-xs text-muted-foreground sm:block"
-            title={presence.online.map((person) => person.name).join(", ")}
-          >
-            {presence.online.map((person) => person.name).join(", ")}
-          </span>
-        )}
+        <span className="shrink-0 text-xs text-muted-foreground">
+          {presence === undefined
+            ? "connecting…"
+            : `${presence.onlineCount} online`}
+        </span>
       </div>
 
       {/* Message log */}
@@ -180,13 +179,14 @@ export function ChatRoom() {
             Loading the room…
           </p>
         ) : rows.length === 0 ? (
-          <div className="flex h-full flex-col items-center justify-center gap-1 text-center">
-            <p className="text-sm font-medium">No messages yet</p>
-            <p className="text-sm text-muted-foreground">
-              {isAuthenticated
-                ? "Say hi — everyone in the room sees it instantly."
-                : "Sign in to start the conversation."}
-            </p>
+          <div className="flex h-full flex-col items-center justify-center gap-1 text-center">              <p className="text-sm font-medium">
+                This is the start of #{channel}
+              </p>
+              <p className="text-sm text-muted-foreground">
+                {isAuthenticated
+                  ? "Say hi — everyone in the channel sees it instantly."
+                  : "Sign in to start the conversation."}
+              </p>
           </div>
         ) : (
           rows.map((row) =>
@@ -301,7 +301,7 @@ export function ChatRoom() {
               onKeyDown={handleKeyDown}
               rows={draftRows}
               maxLength={CHAT_MAX_BODY}
-              placeholder="Message the room…  (Enter to send, Shift + Enter for a new line)"
+              placeholder={`Message #${channel}…  (Enter to send, Shift + Enter for a new line)`}
               className="min-h-10 flex-1 resize-none rounded-xl border border-input bg-background/60 px-3 py-2 text-sm outline-none placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
             />
             <Button

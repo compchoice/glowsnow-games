@@ -10,13 +10,15 @@ const MAX_ITEMS = 30;
 
 type Item = {
   key: string;
-  kind: "lounge" | "reply" | "mention";
+  kind: "lounge" | "reply" | "mention" | "request";
   authorId: string;
   author: string;
   body: string;
   createdAt: number;
   href: string;
   unread: boolean;
+  /** Set only on friend requests, so the tray can answer them in place. */
+  requestId?: string;
 };
 
 /**
@@ -118,6 +120,35 @@ export const list = query({
         });
       }
     }
+
+    // Pending friend requests. These are counted by recipientId, so a request
+    // only ever reaches the person it was sent to — never the sender, never
+    // anyone else, and never anybody's public profile.
+    const requests = await ctx.db
+      .query("friendships")
+      .withIndex("by_recipient", (q) =>
+        q.eq("recipientId", user._id).eq("status", "pending"),
+      )
+      .collect();
+
+    const requesters = await Promise.all(
+      requests.map((request) => ctx.db.get(request.requesterId)),
+    );
+    requests.forEach((request, index) => {
+      const requester = requesters[index];
+      items.push({
+        key: `request:${request._id}`,
+        kind: "request",
+        authorId: request.requesterId,
+        author: requester ? displayName(requester) : "Someone",
+        body: "sent you a friend request",
+        createdAt: request.createdAt,
+        href: `/u/${request.requesterId}`,
+        // Stays unread until it is answered, so a pending ask is never buried.
+        unread: true,
+        requestId: request._id,
+      });
+    });
 
     items.sort((a, b) => b.createdAt - a.createdAt);
 

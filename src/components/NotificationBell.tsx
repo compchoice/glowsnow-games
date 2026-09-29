@@ -2,6 +2,7 @@ import { Link } from "react-router";
 import { useMutation, useQuery } from "convex/react";
 import { formatDistanceToNow } from "date-fns";
 import { api } from "@/convex/_generated/api";
+import type { Id } from "@/convex/_generated/dataModel";
 import { useAuth } from "@/hooks/use-auth";
 import { Button } from "@/components/ui/button";
 import {
@@ -9,13 +10,20 @@ import {
   DropdownMenuContent,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { AtSign, Bell, CornerDownRight, MessageSquare } from "lucide-react";
+import {
+  AtSign,
+  Bell,
+  CornerDownRight,
+  MessageSquare,
+  UserPlus,
+} from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const KIND_ICON = {
   lounge: MessageSquare,
   reply: CornerDownRight,
   mention: AtSign,
+  request: UserPlus,
 } as const;
 
 function timeAgo(timestamp: number) {
@@ -31,6 +39,7 @@ export function NotificationBell() {
   const { isAuthenticated } = useAuth();
   const feed = useQuery(api.notifications.list, isAuthenticated ? {} : "skip");
   const markSeen = useMutation(api.notifications.markSeen);
+  const respond = useMutation(api.friends.respond);
 
   if (!isAuthenticated) return null;
 
@@ -107,6 +116,39 @@ export function NotificationBell() {
                         <p className="mt-0.5 line-clamp-2 text-xs text-muted-foreground">
                           {item.body}
                         </p>
+                        {/* Friend requests can be answered without leaving. */}
+                        {item.kind === "request" && item.requestId && (
+                          <div
+                            className="mt-2 flex gap-1.5"
+                            onClick={(event) => event.preventDefault()}
+                          >
+                            <Button
+                              size="sm"
+                              className="h-7"
+                              onClick={() =>
+                                void respond({
+                                  requestId: item.requestId as Id<"friendships">,
+                                  accept: true,
+                                })
+                              }
+                            >
+                              Accept
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="h-7"
+                              onClick={() =>
+                                void respond({
+                                  requestId: item.requestId as Id<"friendships">,
+                                  accept: false,
+                                })
+                              }
+                            >
+                              Ignore
+                            </Button>
+                          </div>
+                        )}
                       </div>
                     </Link>
                   </li>

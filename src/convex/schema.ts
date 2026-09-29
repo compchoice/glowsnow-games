@@ -30,6 +30,12 @@ export const moderationKindValidator = v.union(
   v.literal("timeout"),
 );
 
+/** A friend request either waits for an answer or has been accepted. */
+export const friendshipStatusValidator = v.union(
+  v.literal("pending"),
+  v.literal("accepted"),
+);
+
 const schema = defineSchema(
   {
     // default auth tables using convex auth.
@@ -79,9 +85,24 @@ const schema = defineSchema(
       authorName: v.string(),
       body: v.string(),
       createdAt: v.number(),
+      /** Which room it was posted in. Absent on older rows, which were "lounge". */
+      channel: v.optional(v.string()),
     })
       .index("by_createdAt", ["createdAt"])
-      .index("by_author", ["authorId", "createdAt"]),
+      .index("by_author", ["authorId", "createdAt"])
+      .index("by_channel", ["channel", "createdAt"]),
+
+    // Friend requests and friendships. Always private to the two members
+    // involved: nothing here is ever readable by anyone else.
+    friendships: defineTable({
+      requesterId: v.id("users"),
+      recipientId: v.id("users"),
+      status: friendshipStatusValidator,
+      createdAt: v.number(),
+      respondedAt: v.optional(v.number()),
+    })
+      .index("by_requester", ["requesterId", "status"])
+      .index("by_recipient", ["recipientId", "status"]),
 
     // A member's saved games. One row per member per game.
     favorites: defineTable({

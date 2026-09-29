@@ -7,6 +7,7 @@ import type { Id } from "@/convex/_generated/dataModel";
 import { PageShell } from "@/components/Layout";
 import { MemberAvatar } from "@/components/MemberAvatar";
 import { ModerationActions } from "@/components/ModerationActions";
+import { FriendButton } from "@/components/FriendButton";
 import { Eyebrow } from "@/components/SiteChrome";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -126,7 +127,7 @@ export default function Profile() {
               </span>
             )}
           </p>
-          <div className="mt-4 flex flex-wrap gap-2">
+          <div className="mt-4 flex flex-wrap items-start gap-2">
             {profile.isSelf && (
               <Button asChild variant="outline" size="sm">
                 <Link to="/shelf">
@@ -141,6 +142,7 @@ export default function Profile() {
                 {profile.isSelf ? "Go to the lounge" : "Message them in the lounge"}
               </Link>
             </Button>
+            <FriendButton userId={profile._id} name={profile.name} />
           </div>
         </div>
       </header>

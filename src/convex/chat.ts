@@ -9,10 +9,32 @@ import { assertCanParticipate, currentFor } from "./moderation";
 const MAX_BODY = 500;
 const DEFAULT_LIMIT = 200;
 const MAX_LIMIT = 400;
+/** Rooms in the server. Kept here so the client can never invent a channel. */
+export const CHANNELS = [
+  { id: "lounge", label: "lounge", topic: "Anything goes" },
+  { id: "games", label: "what-are-we-playing", topic: "Scores, tips, sessions" },
+  { id: "help", label: "help", topic: "Stuck on something?" },
+] as const;
+
+const CHANNEL_IDS = new Set<string>(CHANNELS.map((channel) => channel.id));
+const DEFAULT_CHANNEL = "lounge";
+
+function checkChannel(channel: string): string {
+  if (!CHANNEL_IDS.has(channel)) {
+    throw new Error("That channel does not exist.");
+  }
+  return channel;
+}
 /** How long a heartbeat keeps someone "online". */
 const ONLINE_WINDOW_MS = 25_000;
 /** How long one keystroke keeps someone "typing". */
 const TYPING_WINDOW_MS = 4_500;
+
+/** The channel list, for the server sidebar. */
+export const channels = query({
+  args: {},
+  handler: async () => CHANNELS,
+});
 
 /**
  * The most recent messages, oldest first so the UI can just append and scroll.
@@ -20,15 +42,30 @@ const TYPING_WINDOW_MS = 4_500;
  * to poll for new messages.
  */
 export const list = query({
-  args: { limit: v.optional(v.number()) },
-  handler: async (ctx, { limit }) => {
+  args: { limit: v.optional(v.number()), channel: v.optional(v.string()) },
+  handler: async (ctx, { limit, channel }) => {
     const take = Math.min(Math.max(limit ?? DEFAULT_LIMIT, 1), MAX_LIMIT);
+    const room = checkChannel(channel ?? DEFAULT_CHANNEL);
     const newestFirst = await ctx.db
       .query("chatMessages")
-      .withIndex("by_createdAt")
+      .withIndex("by_channel", (q) => q.eq("channel", room))
       .order("desc")
       .take(take);
-    return newestFirst.reverse();
+
+    // Messages posted before rooms existed have no channel set. Fold them into
+    // the main room so the old history is not stranded.
+    if (room !== DEFAULT_CHANNEL) return newestFirst.reverse();
+
+    const legacy = await ctx.db
+      .query("chatMessages")
+      .withIndex("by_channel", (q) => q.eq("channel", undefined))
+      .order("desc")
+      .take(take);
+
+    return [...newestFirst, ...legacy]
+      .sort((a, b) => b.createdAt - a.createdAt)
+      .slice(0, take)
+      .reverse();
   },
 });
 
@@ -103,8 +140,8 @@ async function touchPresence(
 }
 
 export const send = mutation({
-  args: { body: v.string() },
-  handler: async (ctx, { body }) => {
+  args: { body: v.string(), channel: v.optional(v.string()) },
+  handler: async (ctx, { body, channel }) => {
     const user = await requireUser(ctx);
     await assertCanParticipate(ctx, user);
     const text = body.trim();
@@ -112,12 +149,14 @@ export const send = mutation({
     if (text.length > MAX_BODY) {
       throw new Error(`Keep it under ${MAX_BODY} characters.`);
     }
+    const room = checkChannel(channel ?? DEFAULT_CHANNEL);
 
     const id: Id<"chatMessages"> = await ctx.db.insert("chatMessages", {
       authorId: user._id,
       authorName: displayName(user),
       body: text,
       createdAt: Date.now(),
+      channel: room,
     });
 
     // Sending counts as being here, and ends the typing flag.
