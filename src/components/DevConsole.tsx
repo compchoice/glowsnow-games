@@ -1,22 +1,9 @@
 import { useEffect, useRef, useState } from "react";
 import { devStore, useDevTools } from "@/lib/dev-store";
-import { setCloak } from "@/components/SiteChrome";
+import { setCloak } from "@/lib/cloak";
+import { DEV_COMMANDS } from "@/lib/dev-commands";
 import { SITE_NAME, TAB_PRESETS } from "@/lib/site";
 import { Terminal, X } from "lucide-react";
-
-export type CommandSpec = {
-  cmd: string;
-  args?: string;
-  desc: string;
-};
-
-export const DEV_COMMANDS: CommandSpec[] = [
-  { cmd: "snow", args: "on | off", desc: "turn the droplets on or off" },
-  { cmd: "cloak", args: "preset | off", desc: "disguise the tab as schoolwork" },
-  { cmd: "status", desc: "show what the console is set to right now" },
-  { cmd: "clear", desc: "wipe the console output" },
-  { cmd: "exit", desc: "close the console" },
-];
 
 type Line = { kind: "input" | "output" | "error" | "clear"; text: string };
 

@@ -93,12 +93,16 @@ function Carousel({
 
   React.useEffect(() => {
     if (!api) return
-    onSelect(api)
-    api.on("reInit", onSelect)
-    api.on("select", onSelect)
+    const handleSelect = () => onSelect(api)
+    api.on("reInit", handleSelect)
+    api.on("select", handleSelect)
+    // Publish the initial selection just after mount rather than during the
+    // effect body, so it doesn't cascade a render on every api change.
+    queueMicrotask(handleSelect)
 
     return () => {
-      api?.off("select", onSelect)
+      api.off("reInit", handleSelect)
+      api.off("select", handleSelect)
     }
   }, [api, onSelect])
 

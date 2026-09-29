@@ -4,7 +4,7 @@ import { useQuery } from "convex/react";
 import { motion } from "framer-motion";
 import { api } from "@/convex/_generated/api";
 import { useAuth } from "@/hooks/use-auth";
-import { DEV_COMMANDS } from "@/components/DevConsole";
+import { DEV_COMMANDS } from "@/lib/dev-commands";
 import { CloakMenu, SnowToggle } from "@/components/SiteChrome";
 import { Button } from "@/components/ui/button";
 import { NAV_LINKS, SITE_NAME, SITE_TAGLINE } from "@/lib/site";

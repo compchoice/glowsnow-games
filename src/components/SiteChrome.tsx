@@ -1,6 +1,7 @@
 import { useEffect } from "react";
 import { devStore, useDevTools } from "@/lib/dev-store";
-import { BASE_TITLE, TAB_PRESETS, type TabPreset, emojiFavicon } from "@/lib/site";
+import { applyCloak, setCloak } from "@/lib/cloak";
+import { TAB_PRESETS } from "@/lib/site";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -11,30 +12,6 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Check, EyeOff, Snowflake } from "lucide-react";
-
-/** Applies the cloak (tab title + favicon) wherever it changes. */
-export function applyCloak(preset: TabPreset | null) {
-  if (preset) {
-    document.title = preset.title;
-    let link = document.querySelector<HTMLLinkElement>("link[rel='icon']");
-    if (!link) {
-      link = document.createElement("link");
-      link.rel = "icon";
-      document.head.appendChild(link);
-    }
-    link.href = emojiFavicon(preset.icon);
-    return;
-  }
-
-  document.title = BASE_TITLE;
-  const link = document.querySelector<HTMLLinkElement>("link[rel='icon']");
-  if (link) link.href = "/logo.svg";
-}
-
-export function setCloak(preset: TabPreset | null) {
-  devStore.set({ panicTab: preset });
-  applyCloak(preset);
-}
 
 /** Keeps the cloaked tab title in sync across reloads and route changes. */
 export function SiteEffects() {
