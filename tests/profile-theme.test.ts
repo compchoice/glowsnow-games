@@ -7,6 +7,16 @@ import {
 } from "../src/lib/avatar";
 import { ACCENTS, accentById, accentSwatch, type AccentId } from "../src/lib/theme";
 import { isMentioned, mentionNeedles } from "../src/convex/mention";
+import {
+  ACCENTS,
+  FONTS,
+  WALLPAPERS,
+  accentById,
+  accentSwatch,
+  fontById,
+  isValidWallpaperUrl,
+  themeStore,
+} from "../src/lib/theme";
 
 describe("avatar helpers", () => {
   test("hueFromSeed is stable and always a valid hue", () => {
@@ -71,6 +81,65 @@ describe("theme presets", () => {
     for (const accent of ACCENTS) {
       expect(accentSwatch(accent)).toMatch(/^oklch\(0\.\d+ [\d.]+ \d+\)$/);
     }
+  });
+});
+
+describe("appearance options", () => {
+  test("fonts have unique ids and usable stacks", () => {
+    const ids = FONTS.map((font) => font.id);
+    expect(new Set(ids).size).toBe(ids.length);
+    for (const font of FONTS) {
+      expect(font.label.length).toBeGreaterThan(0);
+      expect(font.stack.length).toBeGreaterThan(0);
+      expect(fontById(font.id)).toBe(font);
+    }
+  });
+
+  test("wallpapers have unique ids and a hint each", () => {
+    const ids = WALLPAPERS.map((wallpaper) => wallpaper.id);
+    expect(new Set(ids).size).toBe(ids.length);
+    for (const wallpaper of WALLPAPERS) {
+      expect(wallpaper.hint.length).toBeGreaterThan(0);
+    }
+    expect(ids).toContain("none");
+    expect(ids).toContain("custom");
+  });
+
+  test("an unknown font or accent falls back instead of throwing", () => {
+    expect(fontById("nope" as never)).toBe(FONTS[0]);
+    expect(accentById("nope" as never)).toBe(ACCENTS[0]);
+  });
+});
+
+describe("wallpaper url validation", () => {
+  test("accepts http(s) images and site-relative paths", () => {
+    expect(isValidWallpaperUrl("https://example.com/wallpaper.jpg")).toBe(true);
+    expect(isValidWallpaperUrl("http://example.com/wallpaper.jpg")).toBe(true);
+    expect(isValidWallpaperUrl("/wallpapers/mine.png")).toBe(true);
+    expect(isValidWallpaperUrl("  /mine.png  ")).toBe(true);
+  });
+
+  test("rejects anything that could execute or break the stylesheet", () => {
+    expect(isValidWallpaperUrl("")).toBe(false);
+    expect(isValidWallpaperUrl("   ")).toBe(false);
+    expect(isValidWallpaperUrl("javascript:alert(1)")).toBe(false);
+    expect(isValidWallpaperUrl("data:image/svg+xml,<svg onload=alert(1)>")).toBe(
+      false,
+    );
+    expect(isValidWallpaperUrl('"/a");color:red;--x:url(b')).toBe(false);
+    expect(isValidWallpaperUrl("ftp://example.com/a.png")).toBe(false);
+  });
+});
+
+describe("the default appearance", () => {
+  test("ships violet, dark, Outfit, no wallpaper, snow on", () => {
+    const theme = themeStore.get();
+    expect(theme.accent).toBe("violet");
+    expect(theme.mode).toBe("dark");
+    expect(theme.font).toBe("outfit");
+    expect(theme.wallpaper).toBe("none");
+    expect(theme.wallpaperUrl).toBe("");
+    expect(theme.snow).toBe(true);
   });
 });
 

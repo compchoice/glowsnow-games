@@ -1,10 +1,9 @@
 import { useEffect, useState } from "react";
 
 /**
- * Theme customization: one accent hue drives the whole palette, plus a
- * light/dark switch. Both live in localStorage and are applied to
- * `<html data-accent="…" class="dark?">` so the CSS variables in index.css
- * do the actual work.
+ * Personal appearance settings. Everything here is client-side only: it lives in
+ * this visitor's localStorage and is applied to the document root, so nobody
+ * else's view changes and no account is required.
  */
 
 export type AccentId =
@@ -16,11 +15,8 @@ export type AccentId =
   | "rose";
 
 export type ThemeMode = "dark" | "light";
-
-export type ThemeState = {
-  accent: AccentId;
-  mode: ThemeMode;
-};
+export type FontId = "outfit" | "system" | "serif" | "mono";
+export type WallpaperId = "none" | "grid" | "dots" | "aurora" | "glow" | "custom";
 
 type Accent = {
   id: AccentId;
@@ -48,20 +44,121 @@ export function accentSwatch(accent: Accent): string {
   return `oklch(0.66 ${accent.chroma} ${accent.hue})`;
 }
 
+/** Only stacks that resolve without pulling another webfont are offered. */
+export type Font = { id: FontId; label: string; stack: string };
+
+export const FONTS: Font[] = [
+  {
+    id: "outfit",
+    label: "Outfit",
+    stack: '"Outfit", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif',
+  },
+  {
+    id: "system",
+    label: "System",
+    stack: 'ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif',
+  },
+  {
+    id: "serif",
+    label: "Serif",
+    stack: 'Georgia, Cambria, "Times New Roman", Times, serif',
+  },
+  {
+    id: "mono",
+    label: "Mono",
+    stack: '"JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace',
+  },
+];
+
+export function fontById(id: FontId): Font {
+  return FONTS.find((font) => font.id === id) ?? FONTS[0];
+}
+
+export type Wallpaper = { id: WallpaperId; label: string; hint: string };
+
+export const WALLPAPERS: Wallpaper[] = [
+  { id: "none", label: "Plain", hint: "Just the colour" },
+  { id: "grid", label: "Grid", hint: "Faint lines" },
+  { id: "dots", label: "Dots", hint: "Dot matrix" },
+  { id: "aurora", label: "Aurora", hint: "Soft colour wash" },
+  { id: "glow", label: "Vignette", hint: "Darkened edges" },
+  { id: "custom", label: "Your image", hint: "Any picture URL" },
+];
+
+export type ThemeState = {
+  accent: AccentId;
+  mode: ThemeMode;
+  font: FontId;
+  wallpaper: WallpaperId;
+  /** Picture URL for the "Your image" wallpaper, stored only in this browser. */
+  wallpaperUrl: string;
+  snow: boolean;
+};
+
 export const THEME_STORAGE_KEY = "dexactive:theme";
-const DEFAULT_THEME: ThemeState = { accent: "violet", mode: "dark" };
+/** Where the snow toggle lived before it moved into Settings. */
+const LEGACY_DEV_KEY = "snowvault:dev";
+
+const DEFAULT_THEME: ThemeState = {
+  accent: "violet",
+  mode: "dark",
+  font: "outfit",
+  wallpaper: "none",
+  wallpaperUrl: "",
+  snow: true,
+};
+
+/**
+ * A wallpaper URL is injected into CSS, so only plain http(s) or site-relative
+ * images are allowed. `data:` and `javascript:` never make it through, and
+ * quotes are escaped so the value cannot break out of the url() token.
+ */
+export function isValidWallpaperUrl(raw: string): boolean {
+  const value = raw.trim();
+  if (!value) return false;
+  return /^https?:\/\/\S+$/i.test(value) || value.startsWith("/");
+}
+
+function safeCssUrl(raw: string): string {
+  const value = raw.trim();
+  if (!isValidWallpaperUrl(value)) return "";
+  return value.replace(/["'()\\<>]/g, (char) => encodeURIComponent(char));
+}
 
 function readInitial(): ThemeState {
   if (typeof window === "undefined") return DEFAULT_THEME;
   try {
     const raw = window.localStorage.getItem(THEME_STORAGE_KEY);
-    if (!raw) return DEFAULT_THEME;
-    const parsed = JSON.parse(raw) as Partial<ThemeState>;
-    const accent = ACCENTS.some((entry) => entry.id === parsed.accent)
-      ? (parsed.accent as AccentId)
-      : DEFAULT_THEME.accent;
-    const mode: ThemeMode = parsed.mode === "light" ? "light" : "dark";
-    return { accent, mode };
+    const parsed = raw ? (JSON.parse(raw) as Partial<ThemeState>) : {};
+
+    // Carry the old snow toggle across so nobody loses their setting.
+    let snow = DEFAULT_THEME.snow;
+    try {
+      const legacyRaw = window.localStorage.getItem(LEGACY_DEV_KEY);
+      if (legacyRaw) {
+        const legacy = JSON.parse(legacyRaw) as { snow?: boolean };
+        if (typeof legacy.snow === "boolean") snow = legacy.snow;
+      }
+    } catch {
+      /* a corrupt legacy blob is not worth failing the whole read over */
+    }
+
+    return {
+      accent: ACCENTS.some((entry) => entry.id === parsed.accent)
+        ? (parsed.accent as AccentId)
+        : DEFAULT_THEME.accent,
+      mode: parsed.mode === "light" ? "light" : "dark",
+      font: FONTS.some((entry) => entry.id === parsed.font)
+        ? (parsed.font as FontId)
+        : DEFAULT_THEME.font,
+      wallpaper: WALLPAPERS.some((entry) => entry.id === parsed.wallpaper)
+        ? (parsed.wallpaper as WallpaperId)
+        : DEFAULT_THEME.wallpaper,
+      wallpaperUrl: isValidWallpaperUrl(parsed.wallpaperUrl ?? "")
+        ? parsed.wallpaperUrl!.trim()
+        : DEFAULT_THEME.wallpaperUrl,
+      snow,
+    };
   } catch {
     return DEFAULT_THEME;
   }
@@ -70,13 +167,16 @@ function readInitial(): ThemeState {
 let state: ThemeState = readInitial();
 const listeners = new Set<(next: ThemeState) => void>();
 
-/** Pushes the theme onto the document root. */
+/** Pushes every appearance choice onto the document root. */
 export function applyTheme(next: ThemeState) {
   if (typeof document === "undefined") return;
   const root = document.documentElement;
   root.dataset.accent = next.accent;
+  root.dataset.font = next.font;
+  root.dataset.wallpaper = next.wallpaper;
   root.classList.toggle("dark", next.mode === "dark");
   root.style.colorScheme = next.mode;
+  root.style.setProperty("--wallpaper-image", safeCssUrl(next.wallpaperUrl));
 }
 
 // Applied at import time so the first paint already has the right palette.
@@ -96,9 +196,11 @@ function setState(patch: Partial<ThemeState>) {
 export const themeStore = {
   get: () => state,
   set: setState,
+  /** Back to the shipped look. */
+  reset: () => setState(DEFAULT_THEME),
 };
 
-/** React hook over the theme store. */
+/** React hook over the appearance store. */
 export function useTheme(): [ThemeState, (patch: Partial<ThemeState>) => void] {
   const [snapshot, setSnapshot] = useState<ThemeState>(state);
   useEffect(() => {

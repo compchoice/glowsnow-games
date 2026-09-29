@@ -3,8 +3,6 @@ import { useEffect, useState } from "react";
 export type DevToolsState = {
   /** Developer console panel open */
   devConsoleOpen: boolean;
-  /** Snow droplets visible */
-  snow: boolean;
   /** Active cloak tab, or null when off */
   panicTab: { label: string; icon: string; title: string } | null;
 };
@@ -12,7 +10,6 @@ export type DevToolsState = {
 const STORAGE_KEY = "snowvault:dev";
 const DEFAULT_STATE: DevToolsState = {
   devConsoleOpen: false,
-  snow: true,
   panicTab: null,
 };
 
@@ -29,7 +26,6 @@ function readInitial(): DevToolsState {
     const parsed = JSON.parse(raw) as Partial<DevToolsState>;
     return {
       devConsoleOpen: false,
-      snow: parsed.snow ?? DEFAULT_STATE.snow,
       panicTab: parsed.panicTab ?? DEFAULT_STATE.panicTab,
     };
   } catch {

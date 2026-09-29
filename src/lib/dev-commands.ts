@@ -21,6 +21,8 @@ export const DEV_COMMANDS: CommandSpec[] = [
   { cmd: "check", args: "ana", desc: "look up one member (mod+)" },
   { cmd: "role", args: "ana moderator", desc: "change a member's role (owner)" },
   { cmd: "snow", args: "on | off", desc: "turn the droplets on or off" },
+  { cmd: "font", args: "serif", desc: "change the body font" },
+  { cmd: "wallpaper", args: "dots | off", desc: "change the background" },
   { cmd: "cloak", args: "preset | off", desc: "disguise the tab as schoolwork" },
   { cmd: "theme", args: "preset", desc: "recolour the site accent" },
   { cmd: "mode", args: "dark | light", desc: "switch the site appearance" },

@@ -221,8 +221,9 @@ export default function Landing() {
             <Palette className="size-5 text-primary" />
             <h3 className="mt-3 text-lg font-semibold">Yours to look at</h3>
             <p className="mt-2 text-sm text-muted-foreground">
-              Six accent colours, light or dark, and the snowfall on or off —
-              picked from the header or the developer console.
+              Six accent colours, light or dark, four fonts, six wallpapers and
+              the snowfall on or off — all in Settings, all remembered only by
+              your own browser.
             </p>
             <p className="mt-4 text-sm text-muted-foreground">
               Try <code className="text-primary">theme azure</code> or{" "}

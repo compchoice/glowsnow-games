@@ -120,6 +120,22 @@
 /* ---- Accent presets ----
    One hue re-tints the accent, ring, glow, charts and sidebar in both modes.
    Set by the theme picker as <html data-accent="azure">. */
+/* Body font, chosen in Settings. Only stacks that need no extra download. */
+html[data-font="outfit"] {
+  --font-body: "Outfit", ui-sans-serif, system-ui, -apple-system, "Segoe UI",
+    sans-serif;
+}
+html[data-font="system"] {
+  --font-body: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto,
+    sans-serif;
+}
+html[data-font="serif"] {
+  --font-body: Georgia, Cambria, "Times New Roman", Times, serif;
+}
+html[data-font="mono"] {
+  --font-body: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+
 html[data-accent="violet"] {
   --accent-hue: 295;
 }
@@ -207,14 +223,91 @@ html[data-accent="rose"] {
   }
   body {
     @apply bg-background text-foreground;
-    font-family:
-      "Outfit", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+    font-family: var(--font-body, "Outfit", ui-sans-serif, system-ui, sans-serif);
     background-image: radial-gradient(
       ellipse 70% 45% at 50% -12%,
       color-mix(in oklab, var(--glow) 18%, transparent),
       transparent 70%
     );
     background-attachment: fixed;
+  }
+
+  /* Personal wallpaper, chosen in Settings. Fixed behind everything and never
+     intercepts clicks; the data attributes are set by the appearance store. */
+  body::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    z-index: 0;
+    pointer-events: none;
+  }
+
+  html[data-wallpaper="none"] body::before {
+    content: none;
+  }
+
+  html[data-wallpaper="grid"] body::before {
+    background-image:
+      linear-gradient(
+        to right,
+        color-mix(in oklab, var(--glow) 14%, transparent) 1px,
+        transparent 1px
+      ),
+      linear-gradient(
+        to bottom,
+        color-mix(in oklab, var(--glow) 14%, transparent) 1px,
+        transparent 1px
+      );
+    background-size: 52px 52px;
+    mask-image: radial-gradient(ellipse 95% 75% at 50% 0%, #000, transparent 78%);
+  }
+
+  html[data-wallpaper="dots"] body::before {
+    background-image: radial-gradient(
+      color-mix(in oklab, var(--glow) 26%, transparent) 1px,
+      transparent 1px
+    );
+    background-size: 26px 26px;
+    mask-image: radial-gradient(ellipse 95% 75% at 50% 0%, #000, transparent 78%);
+  }
+
+  html[data-wallpaper="aurora"] body::before {
+    background-image:
+      radial-gradient(
+        ellipse 55% 38% at 12% 8%,
+        color-mix(in oklab, var(--primary) 26%, transparent),
+        transparent 70%
+      ),
+      radial-gradient(
+        ellipse 48% 34% at 88% 16%,
+        color-mix(in oklab, var(--chart-1) 22%, transparent),
+        transparent 70%
+      ),
+      radial-gradient(
+        ellipse 70% 42% at 50% 104%,
+        color-mix(in oklab, var(--primary) 20%, transparent),
+        transparent 72%
+      );
+  }
+
+  html[data-wallpaper="glow"] body::before {
+    background-image: radial-gradient(
+      ellipse 85% 70% at 50% 40%,
+      transparent 40%,
+      color-mix(in oklab, var(--background) 70%, transparent) 100%
+    );
+  }
+
+  html[data-wallpaper="custom"] body::before {
+    /* A scrim keeps the text readable over whatever picture was chosen. */
+    background-image:
+      linear-gradient(
+        color-mix(in oklab, var(--background) 62%, transparent),
+        color-mix(in oklab, var(--background) 82%, transparent)
+      ),
+      var(--wallpaper-image);
+    background-size: cover;
+    background-position: center;
   }
   code,
   kbd,

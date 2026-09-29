@@ -6,8 +6,7 @@ import { api } from "@/convex/_generated/api";
 import { useAuth } from "@/hooks/use-auth";
 import { DEV_COMMANDS } from "@/lib/dev-commands";
 import { sendToConsole } from "@/lib/console-bridge";
-import { CloakMenu, SnowToggle } from "@/components/SiteChrome";
-import { ThemeMenu } from "@/components/ThemeMenu";
+import { SettingsMenu } from "@/components/SettingsMenu";
 import { NotificationBell } from "@/components/NotificationBell";
 import { MemberAvatar } from "@/components/MemberAvatar";
 import { MemberCount } from "@/components/MemberCount";
@@ -76,9 +75,7 @@ export function SiteHeader() {
         </nav>
 
         <div className="ml-auto flex items-center gap-2">
-          <SnowToggle />
-          <ThemeMenu />
-          <CloakMenu />
+          <SettingsMenu />
           {isAuthenticated && <NotificationBell />}
           {isAuthenticated ? (
             <>

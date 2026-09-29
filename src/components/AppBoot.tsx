@@ -1,7 +1,7 @@
 import React, { useEffect } from "react";
 import { useLocation } from "react-router";
 import { Snowfall } from "@/components/Snowfall";
-import { useDevTools } from "@/lib/dev-store";
+import { useTheme } from "@/lib/theme";
 
 /** Simple loading fallback for route transitions. */
 export function RouteLoading() {
@@ -93,8 +93,8 @@ export function RouteSyncer() {
   return null;
 }
 
-/** Mounts the snowfall once, driven by the persisted dev-store toggle. */
+/** Mounts the snowfall once, driven by the visitor's Settings toggle. */
 export function SnowfallMount() {
-  const [state] = useDevTools();
-  return <Snowfall enabled={state.snow} />;
+  const [theme] = useTheme();
+  return <Snowfall enabled={theme.snow} />;
 }

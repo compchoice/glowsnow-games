@@ -5,7 +5,7 @@ import type { Id } from "@/convex/_generated/dataModel";
 import { devStore, useDevTools } from "@/lib/dev-store";
 import { setCloak } from "@/lib/cloak";
 import { DEV_COMMANDS } from "@/lib/dev-commands";
-import { ACCENTS, themeStore } from "@/lib/theme";
+import { ACCENTS, FONTS, WALLPAPERS, themeStore } from "@/lib/theme";
 import { onConsoleCommand } from "@/lib/console-bridge";
 import { findMember, searchMembers, type MemberLike } from "@/lib/members";
 import { describeDuration, parseDuration } from "@/convex/duration";
@@ -266,12 +266,50 @@ async function runCommand(raw: string, ctx: CommandContext) {
 
     case "snow":
       if (arg === "on" || arg === "off") {
-        devStore.set({ snow: arg === "on" });
+        themeStore.set({ snow: arg === "on" });
         println({ kind: "output", text: `Snow droplets ${arg}.` });
       } else {
         println({ kind: "error", text: "Usage: snow on | snow off" });
       }
       break;
+
+    case "font": {
+      const font = FONTS.find(
+        (entry) => entry.id === arg || entry.label.toLowerCase() === arg,
+      );
+      if (!font) {
+        println({
+          kind: "error",
+          text: `Unknown font. Try: ${FONTS.map((entry) => entry.id).join(", ")}.`,
+        });
+      } else {
+        themeStore.set({ font: font.id });
+        println({ kind: "output", text: `Body font set to ${font.label}.` });
+      }
+      break;
+    }
+
+    case "wallpaper":
+    case "bg": {
+      if (arg === "off" || arg === "none") {
+        themeStore.set({ wallpaper: "none" });
+        println({ kind: "output", text: "Wallpaper removed." });
+        break;
+      }
+      const wallpaper = WALLPAPERS.find(
+        (entry) => entry.id === arg || entry.label.toLowerCase() === arg,
+      );
+      if (!wallpaper) {
+        println({
+          kind: "error",
+          text: `Unknown wallpaper. Try: ${WALLPAPERS.map((entry) => entry.id).join(", ")}, or off.`,
+        });
+      } else {
+        themeStore.set({ wallpaper: wallpaper.id });
+        println({ kind: "output", text: `Wallpaper set to ${wallpaper.label}.` });
+      }
+      break;
+    }
 
     case "cloak": {
       if (arg === "off" || arg === "none") {
@@ -326,7 +364,7 @@ async function runCommand(raw: string, ctx: CommandContext) {
       const theme = themeStore.get();
       println({
         kind: "output",
-        text: `site=${SITE_NAME} · snow=${state.snow ? "on" : "off"} · disguise=${state.panicTab ? state.panicTab.label : "off"} · accent=${theme.accent} · mode=${theme.mode}`,
+        text: `site=${SITE_NAME} · snow=${theme.snow ? "on" : "off"} · font=${theme.font} · wallpaper=${theme.wallpaper} · disguise=${state.panicTab ? state.panicTab.label : "off"} · accent=${theme.accent} · mode=${theme.mode}`,
       });
       break;
     }
