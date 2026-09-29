@@ -4,16 +4,21 @@ import { formatDistanceToNow } from "date-fns";
 import { api } from "@/convex/_generated/api";
 import { PageShell } from "@/components/Layout";
 import { GameGrid } from "@/components/GameGrid";
+import { MemberAvatar } from "@/components/MemberAvatar";
 import { ProxyPanel } from "@/components/ProxyPanel";
 import { Eyebrow } from "@/components/SiteChrome";
 import { Button } from "@/components/ui/button";
 import { useCatalog } from "@/hooks/use-catalog";
 import { useAuth } from "@/hooks/use-auth";
+import { useMemberDirectory } from "@/hooks/use-directory";
 import { SITE_TAGLINE } from "@/lib/site";
 import {
   ArrowRight,
+  Bell,
   Blocks,
+  Heart,
   MessageSquare,
+  Palette,
   Search,
   Sparkles,
   Terminal,
@@ -57,6 +62,7 @@ function SectionHeader({
 export default function Landing() {
   const { games } = useCatalog();
   const { isAuthenticated } = useAuth();
+  const directory = useMemberDirectory();
   const latest = useQuery(api.messages.list, { scope: "community", limit: 3 });
 
   const featured = games.filter((game) => game.featured).slice(0, 3);
@@ -160,12 +166,18 @@ export default function Landing() {
                 className="rounded-xl border border-border/70 bg-card/60 p-5"
               >
                 <div className="flex items-center gap-2">
-                  <span className="flex size-7 items-center justify-center rounded-full border border-border/70 bg-muted text-[11px] font-medium uppercase text-muted-foreground">
-                    {message.authorName.slice(0, 2)}
-                  </span>
-                  <span className="text-sm font-medium">
-                    {message.authorName}
-                  </span>
+                  <MemberAvatar
+                    name={message.authorName}
+                    avatar={directory.get(message.authorId)?.avatar}
+                    seed={message.authorId}
+                    size="sm"
+                  />
+                  <Link
+                    to={`/u/${message.authorId}`}
+                    className="text-sm font-medium transition-colors hover:text-primary"
+                  >
+                    {directory.get(message.authorId)?.name ?? message.authorName}
+                  </Link>
                   <span className="ml-auto text-xs text-muted-foreground">
                     {formatDistanceToNow(new Date(message.createdAt), {
                       addSuffix: true,
@@ -181,6 +193,61 @@ export default function Landing() {
         )}
       </section>
 
+      {/* Make it yours */}
+      <section className="mt-16">
+        <SectionHeader
+          eyebrow="Make it yours"
+          title="Saved games, real profiles, your colours"
+          description="Everything you do here sticks to your account, and the whole site bends to how you like it."
+        />
+        <div className="grid gap-4 sm:grid-cols-3">
+          <div className="rounded-xl border border-border/70 bg-card/60 p-6">
+            <Heart className="size-5 text-primary" />
+            <h3 className="mt-3 text-lg font-semibold">Your shelf</h3>
+            <p className="mt-2 text-sm text-muted-foreground">
+              Save any game with one tap, then group them into playlists — a
+              study-hall lineup, a two-player night, whatever you want.
+            </p>
+            <Link
+              to="/shelf"
+              className="mt-4 inline-flex items-center gap-1.5 text-sm text-primary hover:underline"
+            >
+              Open your shelf
+              <ArrowRight className="size-4" />
+            </Link>
+          </div>
+
+          <div className="rounded-xl border border-border/70 bg-card/60 p-6">
+            <Palette className="size-5 text-primary" />
+            <h3 className="mt-3 text-lg font-semibold">Yours to look at</h3>
+            <p className="mt-2 text-sm text-muted-foreground">
+              Six accent colours, light or dark, and the snowfall on or off —
+              picked from the header or the developer console.
+            </p>
+            <p className="mt-4 text-sm text-muted-foreground">
+              Try <code className="text-primary">theme azure</code> or{" "}
+              <code className="text-primary">mode light</code>.
+            </p>
+          </div>
+
+          <div className="rounded-xl border border-border/70 bg-card/60 p-6">
+            <Bell className="size-5 text-primary" />
+            <h3 className="mt-3 text-lg font-semibold">Never miss a thing</h3>
+            <p className="mt-2 text-sm text-muted-foreground">
+              The bell in the header collects new lounge posts, replies to your
+              messages and chat mentions — so you know when people answer.
+            </p>
+            <Link
+              to="/chat"
+              className="mt-4 inline-flex items-center gap-1.5 text-sm text-primary hover:underline"
+            >
+              Say hello in chat
+              <ArrowRight className="size-4" />
+            </Link>
+          </div>
+        </div>
+      </section>
+
       {/* What you get / owner */}
       <section className="mt-16 grid gap-4 md:grid-cols-2">
         <div className="rounded-xl border border-border/70 bg-card/60 p-6">
@@ -194,9 +261,9 @@ export default function Landing() {
           </p>
           <ul className="mt-4 space-y-2 text-sm text-muted-foreground">
             {[
-              [Blocks, "A catalog you can search by name, category or tag"],
+              [Blocks, "A searchable catalog with saved games and playlists"],
               [MessageSquare, "Threaded messages and per-game comments"],
-              [Users, "A dashboard with your own activity"],
+              [Users, "A profile with an avatar, a bio and your own stats"],
             ].map(([Icon, text]) => {
               const Item = Icon as typeof Blocks;
               return (

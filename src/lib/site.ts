@@ -15,6 +15,7 @@ export const NAV_LINKS: NavLink[] = [
   { label: "Proxy", to: "/proxy" },
   { label: "Community", to: "/community" },
   { label: "Chat", to: "/chat" },
+  { label: "Shelf", to: "/shelf" },
 ];
 
 /** Panic-key cloaking presets: the tab pretends to be schoolwork. */

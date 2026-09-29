@@ -4,12 +4,13 @@ import { useMutation, useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import type { Doc, Id } from "@/convex/_generated/dataModel";
 import { useAuth } from "@/hooks/use-auth";
+import { useMemberDirectory } from "@/hooks/use-directory";
+import { MemberAvatar } from "@/components/MemberAvatar";
 import { Button } from "@/components/ui/button";
 import {
   CHAT_MAX_BODY,
   clockLabel,
   groupChatMessages,
-  initials,
   memberName,
   typingLabel,
 } from "@/lib/chat";
@@ -64,6 +65,7 @@ export function ChatRoom() {
     },
   );
 
+  const directory = useMemberDirectory();
   const [draft, setDraft] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [pinned, setPinned] = useState(true);
@@ -204,9 +206,14 @@ export function ChatRoom() {
               >
                 <div className="w-8 shrink-0">
                   {row.showHeader ? (
-                    <span className="flex size-8 items-center justify-center rounded-full border border-border/70 bg-muted text-[11px] font-medium text-muted-foreground">
-                      {initials(row.message.authorName)}
-                    </span>
+                    <MemberAvatar
+                      name={
+                        directory.get(row.message.authorId)?.name ??
+                        row.message.authorName
+                      }
+                      avatar={directory.get(row.message.authorId)?.avatar}
+                      seed={row.message.authorId}
+                    />
                   ) : null}
                 </div>
 
@@ -218,9 +225,17 @@ export function ChatRoom() {
                         row.mine && "justify-end",
                       )}
                     >
-                      <span className="font-medium text-foreground/85">
-                        {row.mine ? "You" : row.message.authorName}
-                      </span>
+                      {row.mine ? (
+                        <span className="font-medium text-foreground/85">You</span>
+                      ) : (
+                        <Link
+                          to={`/u/${row.message.authorId}`}
+                          className="font-medium text-foreground/85 transition-colors hover:text-primary"
+                        >
+                          {directory.get(row.message.authorId)?.name ??
+                            row.message.authorName}
+                        </Link>
+                      )}
                       <span>{clockLabel(row.message.createdAt)}</span>
                     </div>
                   )}

@@ -4,9 +4,9 @@ import { useMutation, useQuery } from "convex/react";
 import { formatDistanceToNow } from "date-fns";
 import { api } from "@/convex/_generated/api";
 import { PageShell } from "@/components/Layout";
+import { MemberAvatar } from "@/components/MemberAvatar";
 import { Eyebrow } from "@/components/SiteChrome";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import {
   Card,
   CardContent,
@@ -14,10 +14,13 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { useAuth } from "@/hooks/use-auth";
+import { useFavorites } from "@/hooks/use-favorites";
 import {
   Crown,
   Gamepad2,
+  Heart,
   MessageSquare,
+  Pencil,
   Search,
   Shield,
   Sparkles,
@@ -29,30 +32,15 @@ export default function Dashboard() {
   const { user } = useAuth();
   const mine = useQuery(api.messages.mine);
   const status = useQuery(api.users.adminStatus);
-  const rename = useMutation(api.users.rename);
   const claimAdmin = useMutation(api.users.claimAdmin);
+  const favorites = useFavorites();
 
-  const [name, setName] = useState("");
   const [notice, setNotice] = useState<{ tone: "ok" | "error"; text: string } | null>(
     null,
   );
 
   const posts = (mine ?? []).filter((message) => !message.parentId);
   const comments = (mine ?? []).filter((message) => message.parentId);
-
-  async function handleRename() {
-    if (!name.trim()) return;
-    try {
-      await rename({ name });
-      setNotice({ tone: "ok", text: "Display name updated." });
-      setName("");
-    } catch (error) {
-      setNotice({
-        tone: "error",
-        text: error instanceof Error ? error.message : "Could not save that.",
-      });
-    }
-  }
 
   async function handleClaim() {
     try {
@@ -118,8 +106,8 @@ export default function Dashboard() {
       <dl className="mt-6 grid gap-4 sm:grid-cols-3">
         {[
           ["Messages", posts.length, "posted in the lounge"],
-          ["Comments", comments.length, "left on games"],
-          ["Saved", (mine ?? []).length, "total posts and replies"],
+          ["Replies", comments.length, "left on posts and games"],
+          ["Saved games", favorites.slugs.size, "on your shelf"],
         ].map(([label, value, detail]) => (
           <div
             key={label as string}
@@ -179,23 +167,33 @@ export default function Dashboard() {
               <CardTitle className="text-base">Profile</CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
+              <div className="flex items-center gap-3">
+                <MemberAvatar
+                  name={user?.name ?? "Member"}
+                  avatar={user?.avatar ?? null}
+                  seed={user?._id ?? "member"}
+                  size="lg"
+                />
+                <div className="min-w-0">
+                  <p className="truncate font-medium">
+                    {user?.name ?? "Unnamed member"}
+                  </p>
+                  <p className="truncate text-xs text-muted-foreground">
+                    {user?.bio?.trim() || "No bio yet."}
+                  </p>
+                </div>
+              </div>
               <p className="text-sm text-muted-foreground">
-                The name that appears next to your messages.
+                Your name, avatar and bio live on your profile page.
               </p>
-              <Input
-                value={name}
-                onChange={(event) => setName(event.target.value)}
-                placeholder={user?.name ?? "Display name"}
-                maxLength={40}
-              />
-              <Button
-                size="sm"
-                onClick={handleRename}
-                disabled={!name.trim()}
-                className="w-full"
-              >
-                Save display name
-              </Button>
+              {user && (
+                <Button asChild size="sm" variant="outline" className="w-full">
+                  <Link to={`/u/${user._id}`}>
+                    <Pencil className="size-4" />
+                    Edit profile
+                  </Link>
+                </Button>
+              )}
             </CardContent>
           </Card>
 
@@ -247,6 +245,12 @@ export default function Dashboard() {
               <Link to="/proxy">
                 <Search className="size-4" />
                 Search proxy
+              </Link>
+            </Button>
+            <Button asChild variant="outline" size="sm" className="justify-start">
+              <Link to="/shelf">
+                <Heart className="size-4" />
+                Your shelf
               </Link>
             </Button>
             <Button asChild variant="outline" size="sm" className="justify-start">

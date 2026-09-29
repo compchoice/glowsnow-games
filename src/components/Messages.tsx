@@ -5,6 +5,8 @@ import { formatDistanceToNow } from "date-fns";
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
 import { useAuth } from "@/hooks/use-auth";
+import { useMemberDirectory } from "@/hooks/use-directory";
+import { MemberAvatar } from "@/components/MemberAvatar";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
@@ -31,14 +33,6 @@ function timeAgo(timestamp: number) {
   } catch {
     return "just now";
   }
-}
-
-function Avatar({ name }: { name: string }) {
-  return (
-    <span className="flex size-8 shrink-0 items-center justify-center rounded-full border border-border/70 bg-muted text-xs font-medium uppercase text-muted-foreground">
-      {name.slice(0, 2)}
-    </span>
-  );
 }
 
 function Composer({
@@ -132,6 +126,7 @@ export function Messages({
     gameSlug,
     limit: 200,
   }) as MessageDoc[] | undefined;
+  const directory = useMemberDirectory();
 
   const [replyTo, setReplyTo] = useState<Id<"messages"> | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -165,6 +160,11 @@ export function Messages({
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not delete that.");
     }
+  }
+
+  /** Prefers the directory name so a rename shows up on old messages too. */
+  function nameOf(message: MessageDoc) {
+    return directory.get(message.authorId)?.name ?? message.authorName;
   }
 
   function canModerate(message: MessageDoc) {
@@ -218,12 +218,19 @@ export function Messages({
                 )}
               >
                 <div className="flex gap-3">
-                  <Avatar name={message.authorName} />
+                  <MemberAvatar
+                    name={nameOf(message)}
+                    avatar={directory.get(message.authorId)?.avatar}
+                    seed={message.authorId}
+                  />
                   <div className="min-w-0 flex-1">
                     <div className="flex flex-wrap items-center gap-2">
-                      <span className="text-sm font-medium">
-                        {message.authorName}
-                      </span>
+                      <Link
+                        to={`/u/${message.authorId}`}
+                        className="text-sm font-medium transition-colors hover:text-primary"
+                      >
+                        {nameOf(message)}
+                      </Link>
                       <span className="text-xs text-muted-foreground">
                         {timeAgo(message.createdAt)}
                       </span>
@@ -286,12 +293,20 @@ export function Messages({
                   <ul className="mt-3 space-y-2 border-l border-border/70 pl-4">
                     {replies.map((reply) => (
                       <li key={reply._id} className="flex gap-3">
-                        <Avatar name={reply.authorName} />
+                        <MemberAvatar
+                          name={nameOf(reply)}
+                          avatar={directory.get(reply.authorId)?.avatar}
+                          seed={reply.authorId}
+                          size="sm"
+                        />
                         <div className="min-w-0 flex-1">
                           <div className="flex flex-wrap items-center gap-2">
-                            <span className="text-sm font-medium">
-                              {reply.authorName}
-                            </span>
+                            <Link
+                              to={`/u/${reply.authorId}`}
+                              className="text-sm font-medium transition-colors hover:text-primary"
+                            >
+                              {nameOf(reply)}
+                            </Link>
                             <span className="text-xs text-muted-foreground">
                               {timeAgo(reply.createdAt)}
                             </span>
@@ -320,7 +335,7 @@ export function Messages({
                       scope={scope}
                       gameSlug={gameSlug}
                       parentId={message._id}
-                      placeholder={`Reply to ${message.authorName}…`}
+                      placeholder={`Reply to ${nameOf(message)}…`}
                       autoFocus
                       onDone={() => setReplyTo(null)}
                     />

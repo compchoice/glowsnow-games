@@ -1,17 +1,31 @@
+import { useEffect } from "react";
 import { Link, useParams } from "react-router";
+import { useMutation } from "convex/react";
+import { api } from "@/convex/_generated/api";
 import { PageShell } from "@/components/Layout";
 import { GamePlayer } from "@/components/GamePlayer";
 import { GameGrid } from "@/components/GameGrid";
 import { Messages } from "@/components/Messages";
+import { FavoriteButton } from "@/components/FavoriteButton";
 import { Eyebrow } from "@/components/SiteChrome";
 import { Button } from "@/components/ui/button";
 import { useCatalog } from "@/hooks/use-catalog";
+import { useAuth } from "@/hooks/use-auth";
 import { ArrowLeft } from "lucide-react";
 
 export default function GameDetail() {
   const { slug = "" } = useParams();
   const { games, isLoading } = useCatalog();
   const game = games.find((entry) => entry.slug === slug);
+
+  // Playing a saved game is what makes it "recent" on the shelf.
+  const { isAuthenticated } = useAuth();
+  const touch = useMutation(api.favorites.touch);
+  const gameSlug = game?.slug;
+  useEffect(() => {
+    if (!isAuthenticated || !gameSlug) return;
+    void touch({ gameSlug }).catch(() => undefined);
+  }, [isAuthenticated, gameSlug, touch]);
 
   if (isLoading) {
     return (
@@ -60,7 +74,8 @@ export default function GameDetail() {
             {game.title}
           </h1>
         </div>
-        <div className="flex flex-wrap gap-1.5">
+        <div className="flex flex-wrap items-center gap-1.5">
+          <FavoriteButton slug={game.slug} showLabel />
           {game.tags.map((tag) => (
             <span
               key={tag}

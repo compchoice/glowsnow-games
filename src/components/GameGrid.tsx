@@ -1,5 +1,6 @@
 import { Link } from "react-router";
 import { Play } from "lucide-react";
+import { FavoriteButton } from "@/components/FavoriteButton";
 import type { CatalogGame } from "@/lib/catalog";
 import { cn } from "@/lib/utils";
 
@@ -38,10 +39,13 @@ export function GameCard({ game }: { game: CatalogGame }) {
             </span>
           ))}
         </div>
-        <span className="flex items-center gap-1.5 text-sm font-medium text-primary">
-          <Play className="size-3.5" />
-          Play
-        </span>
+        <div className="flex items-center gap-2">
+          <FavoriteButton slug={game.slug} />
+          <span className="flex items-center gap-1.5 text-sm font-medium text-primary">
+            <Play className="size-3.5" />
+            Play
+          </span>
+        </div>
       </div>
     </Link>
   );

@@ -112,6 +112,105 @@ export const DEFAULT_GAMES: GameSeed[] = [
     playUrl: "https://playpager.com/embed/reversi/index.html",
     featured: false,
   },
+  {
+    slug: "minesweeper",
+    title: "Minesweeper",
+    category: "Puzzle",
+    description:
+      "Clear the board without hitting a mine. Flags, numbers and that one guess you always regret.",
+    tags: ["classic", "logic", "quick"],
+    embedUrl: "https://minesweeper.online/embed",
+    playUrl: "https://minesweeper.online/",
+    featured: true,
+  },
+  {
+    slug: "sudoku",
+    title: "Sudoku",
+    category: "Puzzle",
+    description:
+      "Fill every row, column and box with the digits one to nine. Three difficulty levels.",
+    tags: ["numbers", "logic", "relaxing"],
+    embedUrl: "https://playpager.com/embed/sudoku/index.html",
+    playUrl: "https://playpager.com/embed/sudoku/index.html",
+    featured: false,
+  },
+  {
+    slug: "net",
+    title: "Net",
+    category: "Puzzle",
+    description:
+      "Rotate the tiles until every pipe connects back to the source. A calm, tidy brain-teaser.",
+    tags: ["logic", "relaxing", "solo"],
+    embedUrl: "https://www.chiark.greenend.org.uk/~sgtatham/puzzles/js/net.html",
+    playUrl: "https://www.chiark.greenend.org.uk/~sgtatham/puzzles/js/net.html",
+    featured: false,
+  },
+  {
+    slug: "tents",
+    title: "Tents",
+    category: "Puzzle",
+    description:
+      "Place a tent beside every tree, keeping them apart from each other. Pure logic, no guessing.",
+    tags: ["logic", "solo", "relaxing"],
+    embedUrl: "https://www.chiark.greenend.org.uk/~sgtatham/puzzles/js/tents.html",
+    playUrl: "https://www.chiark.greenend.org.uk/~sgtatham/puzzles/js/tents.html",
+    featured: false,
+  },
+  {
+    slug: "fifteen",
+    title: "Fifteen",
+    category: "Puzzle",
+    description:
+      "The sliding tile puzzle. Shuffle, then slide the numbered tiles back into order.",
+    tags: ["classic", "quick", "logic"],
+    embedUrl: "https://www.chiark.greenend.org.uk/~sgtatham/puzzles/js/sixteen.html",
+    playUrl: "https://www.chiark.greenend.org.uk/~sgtatham/puzzles/js/sixteen.html",
+    featured: false,
+  },
+  {
+    slug: "peg-solitaire",
+    title: "Peg Solitaire",
+    category: "Board",
+    description:
+      "Jump pegs to remove them until a single one is left. Simple rules, sneaky depth.",
+    tags: ["classic", "strategy", "solo"],
+    embedUrl: "https://www.chiark.greenend.org.uk/~sgtatham/puzzles/js/pegs.html",
+    playUrl: "https://www.chiark.greenend.org.uk/~sgtatham/puzzles/js/pegs.html",
+    featured: false,
+  },
+  {
+    slug: "flappy-bird",
+    title: "Flappy Bird",
+    category: "Arcade",
+    description:
+      "Tap to flap through the pipes. Brutally simple and famously hard.",
+    tags: ["reflex", "endless", "quick"],
+    embedUrl: "https://flappybird.io/",
+    playUrl: "https://flappybird.io/",
+    featured: false,
+  },
+  {
+    slug: "tetris",
+    title: "Tetris",
+    category: "Arcade",
+    description:
+      "Stack the falling blocks, clear the lines, and keep the stack from reaching the top.",
+    tags: ["classic", "reflex", "high score"],
+    embedUrl: "https://www.mathsisfun.com/games/tetris.html",
+    playUrl: "https://www.mathsisfun.com/games/tetris.html",
+    featured: false,
+  },
+  {
+    slug: "untrusted",
+    title: "Untrusted",
+    category: "Adventure",
+    description:
+      "A puzzle adventure where the only way forward is to rewrite the game while you play it.",
+    tags: ["puzzle", "coding", "story"],
+    embedUrl: "https://alexnisnevich.github.io/untrusted/",
+    playUrl: "https://alexnisnevich.github.io/untrusted/",
+    featured: false,
+  },
 ];
 
 export const ALL_CATEGORIES = "All";

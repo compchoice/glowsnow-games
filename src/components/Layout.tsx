@@ -6,6 +6,9 @@ import { api } from "@/convex/_generated/api";
 import { useAuth } from "@/hooks/use-auth";
 import { DEV_COMMANDS } from "@/lib/dev-commands";
 import { CloakMenu, SnowToggle } from "@/components/SiteChrome";
+import { ThemeMenu } from "@/components/ThemeMenu";
+import { NotificationBell } from "@/components/NotificationBell";
+import { MemberAvatar } from "@/components/MemberAvatar";
 import { Button } from "@/components/ui/button";
 import { NAV_LINKS, SITE_NAME, SITE_TAGLINE } from "@/lib/site";
 import { cn } from "@/lib/utils";
@@ -72,7 +75,9 @@ export function SiteHeader() {
 
         <div className="ml-auto flex items-center gap-2">
           <SnowToggle />
+          <ThemeMenu />
           <CloakMenu />
+          {isAuthenticated && <NotificationBell />}
           {isAuthenticated ? (
             <>
               <Button
@@ -86,6 +91,21 @@ export function SiteHeader() {
                   {user?.name?.split(" ")[0] ?? "Dashboard"}
                 </Link>
               </Button>
+              {user && (
+                <Link
+                  to={`/u/${user._id}`}
+                  className="hidden sm:block"
+                  aria-label="Your profile"
+                  title="Your profile"
+                >
+                  <MemberAvatar
+                    name={user.name ?? "Member"}
+                    avatar={user.avatar ?? null}
+                    seed={user._id}
+                    size="sm"
+                  />
+                </Link>
+              )}
               <Button
                 size="sm"
                 variant="ghost"
@@ -130,6 +150,15 @@ export function SiteHeader() {
                 {link.label}
               </RouterNavLink>
             ),
+          )}
+          {isAuthenticated && user && (
+            <RouterNavLink
+              to={`/u/${user._id}`}
+              onClick={() => setMenuOpen(false)}
+              className="block rounded-lg px-3 py-2 text-sm text-muted-foreground hover:bg-accent hover:text-foreground"
+            >
+              Your profile
+            </RouterNavLink>
           )}
           <RouterNavLink
             to={isAuthenticated ? "/dashboard" : "/auth"}

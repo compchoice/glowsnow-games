@@ -85,7 +85,8 @@ describe("filterCatalog", () => {
 
   test("combines query and category", () => {
     expect(filterCatalog(asCatalog, "solitaire", "Cards").length).toBe(1);
-    expect(filterCatalog(asCatalog, "solitaire", "Board").length).toBe(0);
+    expect(filterCatalog(asCatalog, "checkers", "Board").length).toBe(1);
+    expect(filterCatalog(asCatalog, "checkers", "Cards").length).toBe(0);
   });
 
   test("returns nothing for a nonsense query", () => {

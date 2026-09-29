@@ -36,6 +36,12 @@ const schema = defineSchema(
       isAnonymous: v.optional(v.boolean()), // is the user anonymous. do not remove
 
       role: v.optional(roleValidator), // role of the user. do not remove
+
+      /** Public profile: a short bio and an emoji avatar. */
+      bio: v.optional(v.string()),
+      avatar: v.optional(v.string()),
+      /** Last time this member opened the notifications tray. */
+      notificationsSeenAt: v.optional(v.number()),
     }).index("email", ["email"]), // index for the email. do not remove or modify
 
     // The playable catalog. Owners manage this from the admin area.
@@ -63,7 +69,29 @@ const schema = defineSchema(
       authorName: v.string(),
       body: v.string(),
       createdAt: v.number(),
-    }).index("by_createdAt", ["createdAt"]),
+    })
+      .index("by_createdAt", ["createdAt"])
+      .index("by_author", ["authorId", "createdAt"]),
+
+    // A member's saved games. One row per member per game.
+    favorites: defineTable({
+      userId: v.id("users"),
+      gameSlug: v.string(),
+      createdAt: v.number(),
+      /** Bumped whenever the game is played, so the shelf can show recents. */
+      lastPlayedAt: v.optional(v.number()),
+    })
+      .index("by_user", ["userId", "createdAt"])
+      .index("by_user_game", ["userId", "gameSlug"]),
+
+    // A member's named collections of games.
+    playlists: defineTable({
+      userId: v.id("users"),
+      name: v.string(),
+      slugs: v.array(v.string()),
+      createdAt: v.number(),
+      updatedAt: v.optional(v.number()),
+    }).index("by_user", ["userId", "createdAt"]),
 
     // Who is in the chat right now, and who is mid-sentence. One row per user.
     chatPresence: defineTable({

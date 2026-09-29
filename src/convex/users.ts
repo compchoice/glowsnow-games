@@ -77,13 +77,3 @@ export const setRole = mutation({
   },
 });
 
-export const rename = mutation({
-  args: { name: v.string() },
-  handler: async (ctx, { name }) => {
-    const me = await getCurrentUser(ctx);
-    if (!me) throw new Error("Sign in to update your profile.");
-    const trimmed = name.trim().slice(0, 40);
-    await ctx.db.patch(me._id, { name: trimmed });
-    return { ok: true };
-  },
-});

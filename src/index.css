@@ -45,13 +45,16 @@
 /* CHANGE VALUES FOR THEME */
 :root {
   --radius: 0.75rem;
+  /* Accent hue: every `--accent-hue` reference below resolves from this, and
+     the theme picker swaps it by setting data-accent on <html>. */
+  --accent-hue: 295;
   --background: oklch(0.97 0.006 290);
   --foreground: oklch(0.22 0.02 288);
   --card: oklch(1 0 0);
   --card-foreground: oklch(0.22 0.02 288);
   --popover: oklch(1 0 0);
   --popover-foreground: oklch(0.22 0.02 288);
-  --primary: oklch(0.52 0.2 295);
+  --primary: oklch(0.52 0.2 var(--accent-hue));
   --primary-foreground: oklch(0.99 0.005 290);
   --secondary: oklch(0.94 0.01 290);
   --secondary-foreground: oklch(0.26 0.02 288);
@@ -62,20 +65,20 @@
   --destructive: oklch(0.55 0.2 25);
   --border: oklch(0.22 0.02 288 / 12%);
   --input: oklch(0.22 0.02 288 / 14%);
-  --ring: oklch(0.52 0.2 295 / 55%);
-  --chart-1: oklch(0.52 0.2 295);
+  --ring: oklch(0.52 0.2 var(--accent-hue) / 55%);
+  --chart-1: oklch(0.52 0.2 var(--accent-hue));
   --chart-2: oklch(0.55 0.15 265);
   --chart-3: oklch(0.55 0.14 320);
   --chart-4: oklch(0.62 0.12 285);
   --chart-5: oklch(0.58 0.16 305);
   --sidebar: oklch(0.98 0.005 290);
   --sidebar-foreground: oklch(0.22 0.02 288);
-  --sidebar-primary: oklch(0.52 0.2 295);
+  --sidebar-primary: oklch(0.52 0.2 var(--accent-hue));
   --sidebar-primary-foreground: oklch(0.99 0.005 290);
   --sidebar-accent: oklch(0.94 0.015 292);
   --sidebar-accent-foreground: oklch(0.26 0.02 288);
   --sidebar-border: oklch(0.22 0.02 288 / 12%);
-  --sidebar-ring: oklch(0.52 0.2 295 / 55%);
+  --sidebar-ring: oklch(0.52 0.2 var(--accent-hue) / 55%);
   --glow: var(--primary);
 }
 
@@ -86,7 +89,7 @@
   --card-foreground: oklch(0.94 0.008 288);
   --popover: oklch(0.19 0.014 286);
   --popover-foreground: oklch(0.94 0.008 288);
-  --primary: oklch(0.68 0.17 295);
+  --primary: oklch(0.68 0.17 var(--accent-hue));
   --primary-foreground: oklch(0.15 0.02 288);
   --secondary: oklch(0.24 0.014 286);
   --secondary-foreground: oklch(0.94 0.008 288);
@@ -97,21 +100,43 @@
   --destructive: oklch(0.62 0.19 25);
   --border: oklch(1 0 0 / 9%);
   --input: oklch(1 0 0 / 12%);
-  --ring: oklch(0.68 0.17 295 / 55%);
-  --chart-1: oklch(0.68 0.17 295);
+  --ring: oklch(0.68 0.17 var(--accent-hue) / 55%);
+  --chart-1: oklch(0.68 0.17 var(--accent-hue));
   --chart-2: oklch(0.66 0.14 265);
   --chart-3: oklch(0.66 0.13 320);
   --chart-4: oklch(0.72 0.1 285);
   --chart-5: oklch(0.7 0.14 305);
   --sidebar: oklch(0.18 0.013 286);
   --sidebar-foreground: oklch(0.94 0.008 288);
-  --sidebar-primary: oklch(0.68 0.17 295);
+  --sidebar-primary: oklch(0.68 0.17 var(--accent-hue));
   --sidebar-primary-foreground: oklch(0.15 0.02 288);
   --sidebar-accent: oklch(0.26 0.018 288);
   --sidebar-accent-foreground: oklch(0.95 0.008 288);
   --sidebar-border: oklch(1 0 0 / 9%);
-  --sidebar-ring: oklch(0.68 0.17 295 / 55%);
+  --sidebar-ring: oklch(0.68 0.17 var(--accent-hue) / 55%);
   --glow: var(--primary);
+}
+
+/* ---- Accent presets ----
+   One hue re-tints the accent, ring, glow, charts and sidebar in both modes.
+   Set by the theme picker as <html data-accent="azure">. */
+html[data-accent="violet"] {
+  --accent-hue: 295;
+}
+html[data-accent="azure"] {
+  --accent-hue: 252;
+}
+html[data-accent="cyan"] {
+  --accent-hue: 205;
+}
+html[data-accent="emerald"] {
+  --accent-hue: 158;
+}
+html[data-accent="amber"] {
+  --accent-hue: 78;
+}
+html[data-accent="rose"] {
+  --accent-hue: 12;
 }
 
 /* ---- Restrained glow accents (kept intentionally subtle) ---- */

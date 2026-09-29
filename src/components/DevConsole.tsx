@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { devStore, useDevTools } from "@/lib/dev-store";
 import { setCloak } from "@/lib/cloak";
 import { DEV_COMMANDS } from "@/lib/dev-commands";
+import { ACCENTS, themeStore } from "@/lib/theme";
 import { SITE_NAME, TAB_PRESETS } from "@/lib/site";
 import { Terminal, X } from "lucide-react";
 
@@ -71,11 +72,38 @@ function runCommand(raw: string, println: (line: Line) => void) {
       break;
     }
 
+    case "theme": {
+      const accent = ACCENTS.find(
+        (entry) => entry.id === arg || entry.label.toLowerCase() === arg,
+      );
+      if (!accent) {
+        println({
+          kind: "error",
+          text: `Unknown accent. Try: ${ACCENTS.map((entry) => entry.id).join(", ")}.`,
+        });
+      } else {
+        themeStore.set({ accent: accent.id });
+        println({ kind: "output", text: `Accent set to ${accent.label}.` });
+      }
+      break;
+    }
+
+    case "mode": {
+      if (arg === "dark" || arg === "light") {
+        themeStore.set({ mode: arg });
+        println({ kind: "output", text: `Switched to ${arg} mode.` });
+      } else {
+        println({ kind: "error", text: "Usage: mode dark | mode light" });
+      }
+      break;
+    }
+
     case "status": {
       const state = devStore.get();
+      const theme = themeStore.get();
       println({
         kind: "output",
-        text: `site=${SITE_NAME} · snow=${state.snow ? "on" : "off"} · disguise=${state.panicTab ? state.panicTab.label : "off"}`,
+        text: `site=${SITE_NAME} · snow=${state.snow ? "on" : "off"} · disguise=${state.panicTab ? state.panicTab.label : "off"} · accent=${theme.accent} · mode=${theme.mode}`,
       });
       break;
     }
