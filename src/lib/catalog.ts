@@ -52,8 +52,9 @@ export const DEFAULT_GAMES: GameSeed[] = [
     description:
       "A hexagonal spin on Tetris. Rotate the ring, match the colours, and keep it from filling up.",
     tags: ["fast", "colours", "reflex"],
-    embedUrl: "https://hextris.io/",
-    playUrl: "https://hextris.io/",
+    // hextris.io itself stopped resolving; the project page is the live build.
+    embedUrl: "https://hextris.github.io/",
+    playUrl: "https://hextris.github.io/",
     featured: false,
   },
   {

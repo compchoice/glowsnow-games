@@ -112,3 +112,32 @@ describe("sortCatalog", () => {
     expect(input.map((game) => game.slug)).toEqual(snapshot);
   });
 });
+
+describe("DEFAULT_GAMES embed targets", () => {
+  // A game that 404s or is served by a host that refuses framing shows up as a
+  // raw nginx error page inside the frame, with nothing the player can do.
+  test("every embed and play URL is absolute https", () => {
+    for (const game of DEFAULT_GAMES) {
+      expect(game.embedUrl.startsWith("https://")).toBe(true);
+      expect(game.playUrl.startsWith("https://")).toBe(true);
+    }
+  });
+
+  test("no two games share an embed URL", () => {
+    const urls = DEFAULT_GAMES.map((game) => game.embedUrl);
+    expect(new Set(urls).size).toBe(urls.length);
+  });
+
+  test("proxy mirrors use https too", () => {
+    for (const game of DEFAULT_GAMES) {
+      if (game.proxyUrl) expect(game.proxyUrl.startsWith("https://")).toBe(true);
+    }
+  });
+
+  // hextris.io stopped resolving entirely, which is what made the catalog look
+  // broken. The GitHub Pages build is the maintained one.
+  test("Hextris points at a host that still answers", () => {
+    const hextris = DEFAULT_GAMES.find((game) => game.slug === "hextris");
+    expect(hextris?.embedUrl).toBe("https://hextris.github.io/");
+  });
+});
