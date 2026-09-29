@@ -1,10 +1,11 @@
 import { useEffect, useRef, useState } from "react";
-import { useMutation, useQuery } from "convex/react";
+import { useConvex, useMutation, useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
 import { devStore, useDevTools } from "@/lib/dev-store";
 import { setCloak } from "@/lib/cloak";
 import { DEV_COMMANDS } from "@/lib/dev-commands";
+import { achievementByKey } from "@/lib/engagement";
 import { ACCENTS, FONTS, WALLPAPERS, themeStore } from "@/lib/theme";
 import { onConsoleCommand } from "@/lib/console-bridge";
 import { findMember, searchMembers, type MemberLike } from "@/lib/members";
@@ -58,6 +59,29 @@ type CommandContext = {
   }) => Promise<unknown>;
   clear: (args: { userId: Id<"users"> }) => Promise<unknown>;
   setRole: (args: { userId: Id<"users">; role: RoleName }) => Promise<unknown>;
+  setAnnouncement: (args: {
+    message: string;
+    linkTo?: string;
+    linkLabel?: string;
+  }) => Promise<unknown>;
+  clearAnnouncement: (args: Record<string, never>) => Promise<unknown>;
+  /** The mod audit trail. */
+  audit: Awaited<ReturnType<typeof useQuery<typeof api.reports.audit>>>;
+  /** Who is in chat right now. */
+  online: Awaited<ReturnType<typeof useQuery<typeof api.chat.presence>>>;
+  /** Top of the points table. */
+  leaderboard: Awaited<
+    ReturnType<typeof useQuery<typeof api.achievements.leaderboard>>
+  >;
+  /** The caller's own badges. */
+  badges: Awaited<ReturnType<typeof useQuery<typeof api.achievements.mine>>>;
+  /** Every chat room. */
+  rooms: Awaited<ReturnType<typeof useQuery<typeof api.chat.channels>>>;
+  /** Anything the site search can find. */
+  search: (args: { query: string }) => Promise<
+    | { hits: { kind: string; title: string; detail: string; href: string }[] }
+    | undefined
+  >;
 };
 
 function describeError(error: unknown, fallback: string) {
@@ -407,6 +431,142 @@ async function runCommand(raw: string, ctx: CommandContext) {
       break;
     }
 
+    case "announce": {
+      if (!ctx.isAdmin) {
+        println({ kind: "error", text: "Only the owner can post an announcement." });
+        break;
+      }
+      const message = args.join(" ");
+      if (!message) {
+        println({ kind: "error", text: "Usage: announce <message>" });
+        break;
+      }
+      try {
+        await ctx.setAnnouncement({ message });
+        println({ kind: "output", text: "Announcement posted to the home page." });
+      } catch (error) {
+        println({ kind: "error", text: describeError(error, "Could not post that.") });
+      }
+      break;
+    }
+
+    case "unannounce": {
+      if (!ctx.isAdmin) {
+        println({ kind: "error", text: "Only the owner can take an announcement down." });
+        break;
+      }
+      try {
+        await ctx.clearAnnouncement({});
+        println({
+          kind: "output",
+          text: "Announcement taken down. The home page falls back to its own message.",
+        });
+      } catch (error) {
+        println({
+          kind: "error",
+          text: describeError(error, "Could not take it down."),
+        });
+      }
+      break;
+    }
+
+    case "audit": {
+      if (!ctx.isModerator) {
+        println({ kind: "error", text: "You need moderator access to do that." });
+        break;
+      }
+      const rows = ctx.audit ?? [];
+      if (rows.length === 0) {
+        println({ kind: "output", text: "No staff actions recorded yet." });
+        break;
+      }
+      for (const row of rows.slice(0, 15)) {
+        println({
+          kind: "output",
+          text: `  ${row.actorName} · ${row.action}${row.detail ? ` · ${row.detail}` : ""}`,
+        });
+      }
+      break;
+    }
+
+    case "rooms":
+    case "channels": {
+      for (const room of ctx.rooms ?? []) {
+        println({ kind: "output", text: `  #${room.id} — ${room.topic}` });
+      }
+      break;
+    }
+
+    case "online": {
+      const people = ctx.online?.online ?? [];
+      println({
+        kind: "output",
+        text: `${ctx.online?.onlineCount ?? 0} in chat right now.`,
+      });
+      for (const person of people.slice(0, 15)) {
+        println({ kind: "output", text: `  ${person.name}` });
+      }
+      break;
+    }
+
+    case "rank":
+    case "leaderboard": {
+      const rows = ctx.leaderboard ?? [];
+      if (rows.length === 0) {
+        println({ kind: "output", text: "Nobody has earned a badge yet." });
+        break;
+      }
+      for (const row of rows.slice(0, 10)) {
+        println({
+          kind: "output",
+          text: `  ${row.rank}. ${row.name} — ${row.points} pts (${row.badges})`,
+        });
+      }
+      break;
+    }
+
+    case "badges": {
+      const earned = ctx.badges?.earned ?? [];
+      if (earned.length === 0) {
+        println({
+          kind: "output",
+          text: "No badges yet. Post in chat, save a game, or vote in a poll.",
+        });
+        break;
+      }
+      println({ kind: "output", text: `You have ${ctx.badges?.points ?? 0} points:` });
+      for (const key of earned) {
+        const badge = achievementByKey(key);
+        if (badge) {
+          println({ kind: "output", text: `  ${badge.emoji} ${badge.title} (${badge.points})` });
+        }
+      }
+      break;
+    }
+
+    case "find":
+    case "search": {
+      const query = args.join(" ");
+      if (!query) {
+        println({ kind: "error", text: "Usage: search <words>" });
+        break;
+      }
+      try {
+        const result = await ctx.search({ query });
+        const hits = result?.hits ?? [];
+        if (hits.length === 0) {
+          println({ kind: "output", text: `Nothing matched “${query}”.` });
+          break;
+        }
+        for (const hit of hits.slice(0, 10)) {
+          println({ kind: "output", text: `  ${hit.kind} · ${hit.title} — ${hit.href}` });
+        }
+      } catch (error) {
+        println({ kind: "error", text: describeError(error, "Search failed.") });
+      }
+      break;
+    }
+
     case "clear":
       println({ kind: "clear", text: "" });
       break;
@@ -453,6 +613,28 @@ export function DevConsole() {
   const timeout = useMutation(api.moderation.timeout);
   const clear = useMutation(api.moderation.clear);
   const setRole = useMutation(api.users.setRole);
+  const setAnnouncement = useMutation(api.announcements.set);
+  const clearAnnouncement = useMutation(api.announcements.clear);
+
+  // Read-only data for the new informational commands. Staff-only queries are
+  // skipped rather than fetched, so a member never triggers a rejected query.
+  const audit = useQuery(
+    api.reports.audit,
+    status?.isModerator ? {} : "skip",
+  );
+  const online = useQuery(api.chat.presence, open ? {} : "skip");
+  const leaderboard = useQuery(
+    api.achievements.leaderboard,
+    open ? {} : "skip",
+  );
+  const badges = useQuery(
+    api.achievements.mine,
+    open && status?.signedIn ? {} : "skip",
+  );
+  const rooms = useQuery(api.chat.channels, open ? {} : "skip");
+  // Search is a one-off, typed command rather than a live subscription, so it
+  // runs through the client instead of holding a query open.
+  const convex = useConvex();
 
   useEffect(() => {
     if (scrollRef.current) {
@@ -502,6 +684,12 @@ export function DevConsole() {
     void runCommand(raw, {
       println,
       members: directory ?? [],
+      audit,
+      online,
+      leaderboard,
+      badges,
+      rooms,
+      search: (args) => convex.query(api.search.all, args),
       isAdmin: status?.isAdmin ?? false,
       isModerator: status?.isModerator ?? false,
       moderation,
@@ -510,6 +698,8 @@ export function DevConsole() {
       timeout,
       clear,
       setRole,
+      setAnnouncement,
+      clearAnnouncement,
     });
   }
 

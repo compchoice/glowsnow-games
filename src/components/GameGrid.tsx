@@ -1,5 +1,5 @@
 import { Link } from "react-router";
-import { Play } from "lucide-react";
+import { ExternalLink, Play } from "lucide-react";
 import { FavoriteButton } from "@/components/FavoriteButton";
 import type { CatalogGame } from "@/lib/catalog";
 import { cn } from "@/lib/utils";
@@ -30,34 +30,41 @@ export function GameCard({
           )}
         </div>
         <p className="mt-2 text-sm text-muted-foreground">{game.description}</p>
-      </div>
-
-      <div className="mt-4 flex items-center justify-between gap-3">
-        <div className="flex flex-wrap gap-1.5">
-          <span className="rounded-md bg-muted px-2 py-0.5 text-[11px] text-muted-foreground">
-            {game.category}
-          </span>
-          {game.tags.slice(0, 2).map((tag) => (
-            <span
-              key={tag}
-              className="rounded-md bg-muted/60 px-2 py-0.5 text-[11px] text-muted-foreground"
-            >
-              {tag}
+      </div>        <div className="mt-4 flex items-center justify-between gap-3">
+          <div className="flex flex-wrap gap-1.5">
+            <span className="rounded-md bg-muted px-2 py-0.5 text-[11px] text-muted-foreground">
+              {game.category}
             </span>
-          ))}
+            {game.external && (
+              <span className="rounded-md border border-primary/30 bg-primary/10 px-2 py-0.5 text-[11px] text-primary">
+                New tab
+              </span>
+            )}
+            {game.tags.slice(0, 2).map((tag) => (
+              <span
+                key={tag}
+                className="rounded-md bg-muted/60 px-2 py-0.5 text-[11px] text-muted-foreground"
+              >
+                {tag}
+              </span>
+            ))}
+          </div>
+          <div className="flex items-center gap-2">
+            <FavoriteButton
+              slug={game.slug}
+              title={game.title}
+              undoable={confirmUnsave}
+            />
+            <span className="flex items-center gap-1.5 text-sm font-medium text-primary">
+              {game.external ? (
+                <ExternalLink className="size-3.5" />
+              ) : (
+                <Play className="size-3.5" />
+              )}
+              {game.external ? "Open" : "Play"}
+            </span>
+          </div>
         </div>
-        <div className="flex items-center gap-2">
-          <FavoriteButton
-            slug={game.slug}
-            title={game.title}
-            undoable={confirmUnsave}
-          />
-          <span className="flex items-center gap-1.5 text-sm font-medium text-primary">
-            <Play className="size-3.5" />
-            Play
-          </span>
-        </div>
-      </div>
     </Link>
   );
 }

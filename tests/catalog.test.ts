@@ -170,3 +170,20 @@ describe("catalog curation", () => {
     }
   });
 });
+
+describe("games that cannot be framed", () => {
+  // Roblox sends X-Frame-Options: SAMEORIGIN, so an iframe can only ever show
+  // a refused frame. Those entries are marked and the player links out instead.
+  test("every external game points at a real destination", () => {
+    for (const game of DEFAULT_GAMES.filter((entry) => entry.external)) {
+      expect(game.embedUrl.startsWith("https://")).toBe(true);
+      expect(game.playUrl.startsWith("https://")).toBe(true);
+      expect(game.playUrl).toBe(game.embedUrl);
+    }
+  });
+
+  test("nothing else is marked external", () => {
+    const external = DEFAULT_GAMES.filter((entry) => entry.external);
+    expect(external.map((game) => game.slug)).toEqual(["roblox"]);
+  });
+});

@@ -41,6 +41,29 @@ export function GamePlayer({ game }: { game: CatalogGame }) {
     return () => clearTimeout(timer);
   }, [frameToken, viaProxy, failed]);
 
+  // Some games (Roblox) send X-Frame-Options and cannot be framed at all.
+  // Rather than show a permanently broken frame, these get a plain launcher.
+  if (game.external) {
+    return (
+      <div className="flex flex-col items-center justify-center gap-4 rounded-xl border border-border/70 bg-card/60 p-10 text-center">
+        <Shield className="size-8 text-primary" />
+        <div>
+          <p className="font-medium">{game.title} opens on its own site</p>
+          <p className="mx-auto mt-1 max-w-md text-sm text-muted-foreground">
+            This game refuses to be embedded, so it opens in a new tab. Everything
+            else in the arcade plays right here.
+          </p>
+        </div>
+        <Button asChild size="lg">
+          <a href={game.playUrl} target="_blank" rel="noreferrer">
+            <ExternalLink className="size-4" />
+            Open {game.title}
+          </a>
+        </Button>
+      </div>
+    );
+  }
+
   return (
     <div className="overflow-hidden rounded-xl border border-border/70 bg-card/60">
       <div className="relative aspect-video w-full bg-muted/40">

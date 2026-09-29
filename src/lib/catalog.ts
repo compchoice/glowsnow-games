@@ -8,6 +8,12 @@ export type CatalogGame = {
   playUrl: string;
   /** Optional mirror used only when playing through the proxy. */
   proxyUrl?: string;
+  /**
+   * Some games cannot be framed at all — Roblox sends `X-Frame-Options:
+   * SAMEORIGIN`, so an iframe would only ever show a refused frame. These
+   * entries open in a new tab instead of pretending to embed.
+   */
+  external?: boolean;
   featured: boolean;
   /** Built-in starters vs. games the owner added from the admin area. */
   source: "built-in" | "database";
@@ -211,6 +217,51 @@ export const DEFAULT_GAMES: GameSeed[] = [
     embedUrl: "https://drivemad.com/",
     playUrl: "https://drivemad.com/",
     featured: false,
+  },
+  {
+    slug: "basket-random",
+    title: "Basket Random",
+    category: "Action",
+    description:
+      "Shoot, steal, dunk. Every round ends with somebody's limbs on the floor.",
+    tags: ["chaos", "physics", "quick"],
+    embedUrl: "https://basketrandom.com/",
+    playUrl: "https://basketrandom.com/",
+    featured: true,
+  },
+  {
+    slug: "surviv-io",
+    title: "surviv.io",
+    category: "Action",
+    description:
+      "A tiny 2D battle royale against bots. Last one standing wins the round.",
+    tags: ["battle royale", "quick", "pixel"],
+    embedUrl: "https://surviv.io/",
+    playUrl: "https://surviv.io/",
+    featured: false,
+  },
+  {
+    slug: "diep-io",
+    title: "diep.io",
+    category: "Action",
+    description:
+      "Drive a tank, eat shapes, and grow until something bigger eats you.",
+    tags: ["io", "tanks", "endless"],
+    embedUrl: "https://diep.io/",
+    playUrl: "https://diep.io/",
+    featured: false,
+  },
+  {
+    slug: "roblox",
+    title: "Roblox",
+    category: "Sandbox",
+    description:
+      "Brookhaven, Blox Fruits, Doors and thousands more. Roblox blocks embedding, so this one opens on their site.",
+    tags: ["sandbox", "massive", "roblox"],
+    embedUrl: "https://www.roblox.com/discover/",
+    playUrl: "https://www.roblox.com/discover/",
+    external: true,
+    featured: true,
   },
   {
     slug: "map-puzzle",
