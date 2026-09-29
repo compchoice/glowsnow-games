@@ -409,6 +409,7 @@ export function DevConsole() {
     api.moderation.list,
     status?.isModerator ? {} : "skip",
   );
+
   const ban = useMutation(api.moderation.ban);
   const timeout = useMutation(api.moderation.timeout);
   const clear = useMutation(api.moderation.clear);
@@ -493,6 +494,11 @@ export function DevConsole() {
       }
     }
   }
+
+  // The console is a staff tool. Members and guests get no button, no Ctrl + `
+  // shortcut, and no keyboard listener, because the whole component unmounts.
+  // Checked here, after every hook, so a role change can never break the order.
+  if (!status?.isModerator) return null;
 
   if (!open) {
     return (

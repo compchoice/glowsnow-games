@@ -198,13 +198,22 @@ export function SiteHeader() {
 
 export function SiteFooter() {
   const requests = useQuery(api.requests.list);
+  const status = useQuery(api.users.adminStatus);
+  const canModerate = status?.isModerator ?? false;
 
   const open = (requests ?? []).filter((row) => row.status === "open").length;
   const latest = (requests ?? []).slice(0, 2);
 
   return (
     <footer className="mt-20 border-t border-border/70 bg-card/40">
-      <div className="mx-auto grid w-full max-w-6xl gap-10 px-4 py-10 sm:px-6 md:grid-cols-[1.4fr_1fr_1fr]">
+      <div
+        className={cn(
+          "mx-auto grid w-full max-w-6xl gap-10 px-4 py-10 sm:px-6",
+          canModerate
+            ? "md:grid-cols-[1.4fr_1fr_1fr]"
+            : "md:grid-cols-[1.4fr_1fr]",
+        )}
+      >
         <div>
           <Brand />
           <p className="mt-3 max-w-sm text-sm text-muted-foreground">
@@ -255,6 +264,9 @@ export function SiteFooter() {
           </Button>
         </div>
 
+        {/* Staff only: the command list hands out console shortcuts, so members
+            and guests never see it. */}
+        {canModerate && (
         <div>
           <p className="text-xs font-medium uppercase tracking-[0.2em] text-muted-foreground">
             Developer commands
@@ -288,6 +300,7 @@ export function SiteFooter() {
             ))}
           </ul>
         </div>
+        )}
       </div>
 
       <div className="flex flex-wrap items-center justify-center gap-x-3 gap-y-2 border-t border-border/70 py-4 text-center text-xs text-muted-foreground">
