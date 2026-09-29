@@ -12,6 +12,9 @@ import { describeDuration, parseDuration } from "@/convex/duration";
 import { SITE_NAME, TAB_PRESETS } from "@/lib/site";
 import { Terminal, X } from "lucide-react";
 
+const ROLES = ["member", "user", "moderator", "admin"] as const;
+type RoleName = (typeof ROLES)[number];
+
 type Line = { kind: "input" | "output" | "error" | "clear"; text: string };
 
 const CLOAK_ALIASES: Record<string, number> = {
@@ -40,6 +43,7 @@ type CommandContext = {
   println: (line: Line) => void;
   members: MemberLike[];
   isAdmin: boolean;
+  isModerator: boolean;
   moderation: ModerationRow[] | undefined;
   ban: (args: { userId: Id<"users">; reason?: string }) => Promise<unknown>;
   timeout: (args: {
@@ -48,6 +52,7 @@ type CommandContext = {
     reason?: string;
   }) => Promise<unknown>;
   clear: (args: { userId: Id<"users"> }) => Promise<unknown>;
+  setRole: (args: { userId: Id<"users">; role: RoleName }) => Promise<unknown>;
 };
 
 function describeError(error: unknown, fallback: string) {
@@ -69,8 +74,8 @@ async function runCommand(raw: string, ctx: CommandContext) {
 
   /** Shared tail for the moderation commands. */
   function needMember(needle?: string) {
-    if (!ctx.isAdmin) {
-      println({ kind: "error", text: "Only the owner can moderate." });
+    if (!ctx.isModerator) {
+      println({ kind: "error", text: "You need moderator access to do that." });
       return null;
     }
     if (!needle) return null;
@@ -99,8 +104,8 @@ async function runCommand(raw: string, ctx: CommandContext) {
 
     case "mods":
     case "moderation": {
-      if (!ctx.isAdmin) {
-        println({ kind: "error", text: "Only the owner can moderate." });
+      if (!ctx.isModerator) {
+        println({ kind: "error", text: "You need moderator access to do that." });
         break;
       }
       const rows = ctx.moderation;
@@ -121,9 +126,13 @@ async function runCommand(raw: string, ctx: CommandContext) {
       break;
     }
 
-    case "ban": {
+    case "ban":
+    case "kick": {
       if (!ctx.isAdmin) {
-        println({ kind: "error", text: "Only the owner can moderate." });
+        println({
+          kind: "error",
+          text: "Banning is owner-only. Moderators can use timeout instead.",
+        });
         break;
       }
       const member = needMember(args[0]);
@@ -145,8 +154,8 @@ async function runCommand(raw: string, ctx: CommandContext) {
 
     case "timeout":
     case "mute": {
-      if (!ctx.isAdmin) {
-        println({ kind: "error", text: "Only the owner can moderate." });
+      if (!ctx.isModerator) {
+        println({ kind: "error", text: "You need moderator access to do that." });
         break;
       }
       // `mute ana` means ten minutes; `timeout ana 2h` spells it out.
@@ -213,10 +222,6 @@ async function runCommand(raw: string, ctx: CommandContext) {
 
     case "check":
     case "who": {
-      if (!ctx.isAdmin) {
-        println({ kind: "error", text: "Only the owner can look members up." });
-        break;
-      }
       const member = needMember(args[0]);
       if (!member) {
         if (!args[0]) println({ kind: "error", text: "Usage: check <member>" });
@@ -224,6 +229,38 @@ async function runCommand(raw: string, ctx: CommandContext) {
       }
       const row = (ctx.moderation ?? []).find((entry) => entry.userId === member._id);
       println({ kind: "output", text: `${member.name} — ${row ? `${row.kind} · ${row.summary}` : "not moderated"}` });
+      break;
+    }
+
+    case "role": {
+      if (!ctx.isAdmin) {
+        println({ kind: "error", text: "Only the owner can change roles." });
+        break;
+      }
+      const member = needMember(args[0]);
+      if (!member) {
+        if (!args[0]) {
+          println({ kind: "error", text: "Usage: role <member> member|user|moderator|admin" });
+        }
+        break;
+      }
+      const next = ROLES.find((role) => role === (args[1] ?? "").toLowerCase());
+      if (!next) {
+        println({
+          kind: "error",
+          text: `Pick one of: ${ROLES.join(", ")}.`,
+        });
+        break;
+      }
+      try {
+        await ctx.setRole({ userId: member._id as Id<"users">, role: next });
+        println({ kind: "output", text: `${member.name} is now ${next}.` });
+      } catch (error) {
+        println({
+          kind: "error",
+          text: describeError(error, "Could not change that role."),
+        });
+      }
       break;
     }
 
@@ -332,11 +369,12 @@ export function DevConsole() {
   const directory = useQuery(api.profiles.directory);
   const moderation = useQuery(
     api.moderation.list,
-    status?.isAdmin ? {} : "skip",
+    status?.isModerator ? {} : "skip",
   );
   const ban = useMutation(api.moderation.ban);
   const timeout = useMutation(api.moderation.timeout);
   const clear = useMutation(api.moderation.clear);
+  const setRole = useMutation(api.users.setRole);
 
   useEffect(() => {
     if (scrollRef.current) {
@@ -387,10 +425,12 @@ export function DevConsole() {
       println,
       members: directory ?? [],
       isAdmin: status?.isAdmin ?? false,
+      isModerator: status?.isModerator ?? false,
       moderation,
       ban,
       timeout,
       clear,
+      setRole,
     });
   }
 

@@ -2,7 +2,17 @@ import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
 import type { MutationCtx, QueryCtx } from "./_generated/server";
 import type { Doc, Id } from "./_generated/dataModel";
-import { displayName, requireAdmin } from "./lib";
+import {
+  assertCanModerate,
+  displayName,
+  getCurrentUser,
+  isAdmin,
+  isModerator,
+  requireAdmin,
+  requireModerator,
+  roleRank,
+} from "./lib";
+import { ROLES } from "./schema";
 import { describeDuration, timeLeft } from "./duration";
 
 const MAX_REASON = 140;
@@ -73,11 +83,11 @@ export async function assertCanParticipate(ctx: Ctx, user: Doc<"users">) {
   );
 }
 
-/** Everything currently in force, newest first. Owner only. */
+/** Everything currently in force, newest first. Moderators and up. */
 export const list = query({
   args: {},
   handler: async (ctx) => {
-    await requireAdmin(ctx);
+    await requireModerator(ctx);
     const now = Date.now();
     const rows = await ctx.db.query("moderation").collect();
     const users = await ctx.db.query("users").collect();
@@ -93,11 +103,11 @@ export const list = query({
   },
 });
 
-/** One member's moderation state. Owner only. */
+/** One member's moderation state. Moderators and up. */
 export const status = query({
   args: { userId: v.id("users") },
   handler: async (ctx, { userId }) => {
-    await requireAdmin(ctx);
+    await requireModerator(ctx);
     const now = Date.now();
     const row = await currentFor(ctx, userId, now);
     const user = await ctx.db.get(userId);
@@ -108,17 +118,51 @@ export const status = query({
   },
 });
 
+/**
+ * What the signed-in viewer is allowed to do to this member, so the UI never
+ * has to guess. Banning stays owner-only; timing out is open to moderators.
+ */
+export const abilities = query({
+  args: { userId: v.id("users") },
+  handler: async (ctx, { userId }) => {
+    const viewer = await getCurrentUser(ctx);
+    const target = await ctx.db.get(userId);
+
+    const none = {
+      canBan: false,
+      canTimeout: false,
+      canClear: false,
+      active: null,
+      viewerRole: viewer?.role ?? null,
+      targetRole: target?.role ?? null,
+    };
+    if (!viewer || !target) return none;
+
+    // Strictly below: nobody moderates themselves or their own rank.
+    const outranks = roleRank(viewer) > roleRank(target);
+    const active = await currentFor(ctx, userId);
+
+    return {
+      canBan: outranks && isAdmin(viewer),
+      canTimeout: outranks && isModerator(viewer),
+      canClear: outranks && isModerator(viewer) && active !== null,
+      active: active ? describe(active, Date.now()) : null,
+      viewerRole: viewer.role ?? ROLES.MEMBER,
+      targetRole: target.role ?? ROLES.MEMBER,
+    };
+  },
+});
+
 /** Permanent ban. Owner only. */
 export const ban = mutation({
   args: { userId: v.id("users"), reason: v.optional(v.string()) },
   handler: async (ctx, { userId, reason }) => {
     const admin = await requireAdmin(ctx);
-    if (admin._id === userId) {
-      throw new Error("You cannot ban yourself.");
-    }
-    if (!(await ctx.db.get(userId))) {
+    const target = await ctx.db.get(userId);
+    if (!target) {
       throw new Error("That member no longer exists.");
     }
+    assertCanModerate(admin, target);
 
     const trimmed = reason?.trim().slice(0, MAX_REASON);
     const existing = await currentFor(ctx, userId);
@@ -145,13 +189,12 @@ export const timeout = mutation({
     reason: v.optional(v.string()),
   },
   handler: async (ctx, { userId, durationMs, reason }) => {
-    const admin = await requireAdmin(ctx);
-    if (admin._id === userId) {
-      throw new Error("You cannot time yourself out.");
-    }
-    if (!(await ctx.db.get(userId))) {
+    const moderator = await requireModerator(ctx);
+    const target = await ctx.db.get(userId);
+    if (!target) {
       throw new Error("That member no longer exists.");
     }
+    assertCanModerate(moderator, target);
     if (!Number.isFinite(durationMs) || durationMs <= 0) {
       throw new Error("Give a real duration, like 10m or 2h.");
     }
@@ -167,22 +210,24 @@ export const timeout = mutation({
       kind: "timeout",
       until: Date.now() + capped,
       reason: trimmed || undefined,
-      by: admin._id,
+      by: moderator._id,
       createdAt: Date.now(),
     });
     return { ok: true, until: Date.now() + capped, label: describeDuration(capped) };
   },
 });
 
-/** Lift a ban or a timeout early. Owner only. */
+/** Lift a ban or a timeout early. Moderators and up. */
 export const clear = mutation({
   args: { userId: v.id("users") },
   handler: async (ctx, { userId }) => {
-    await requireAdmin(ctx);
-    const existing = await ctx.db
-      .query("moderation")
-      .withIndex("by_user", (q) => q.eq("userId", userId))
-      .first();
+    const moderator = await requireModerator(ctx);
+    const target = await ctx.db.get(userId);
+    if (!target) {
+      throw new Error("That member no longer exists.");
+    }
+    assertCanModerate(moderator, target);
+    const existing = await currentFor(ctx, userId);
     if (!existing) {
       throw new Error("That member is not moderated.");
     }

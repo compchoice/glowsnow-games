@@ -1,7 +1,7 @@
 import { getAuthUserId } from "@convex-dev/auth/server";
 import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
-import { getCurrentUser, hasAnyAdmin, isAdmin, requireAdmin } from "./lib";
+import { getCurrentUser, hasAnyAdmin, isAdmin, isModerator, requireAdmin } from "./lib";
 import { ROLES, roleValidator } from "./schema";
 
 /**
@@ -25,6 +25,8 @@ export const adminStatus = query({
     const user = await getCurrentUser(ctx);
     return {
       isAdmin: isAdmin(user),
+      isModerator: isModerator(user),
+      role: user?.role ?? ROLES.MEMBER,
       hasAdmin: await hasAnyAdmin(ctx),
       signedIn: user !== null,
     };

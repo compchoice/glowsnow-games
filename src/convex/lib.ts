@@ -23,11 +23,50 @@ export function isAdmin(user: Doc<"users"> | null): boolean {
   return user?.role === ROLES.ADMIN;
 }
 
+export function isModerator(user: Doc<"users"> | null): boolean {
+  return user?.role === ROLES.ADMIN || user?.role === ROLES.MODERATOR;
+}
+
+/**
+ * Ordering used for every "can you moderate them" decision. A member can only
+ * act on somebody strictly below them, so nobody can lock themselves or a peer
+ * out — and a moderator can never touch the owner.
+ */
+const ROLE_RANK: Record<string, number> = {
+  [ROLES.MEMBER]: 0,
+  [ROLES.USER]: 1,
+  [ROLES.MODERATOR]: 2,
+  [ROLES.ADMIN]: 3,
+};
+
+export function roleRank(user: Doc<"users"> | null): number {
+  return ROLE_RANK[user?.role ?? ROLES.MEMBER] ?? 0;
+}
+
+/** Throws unless `actor` outranks `target`. */
+export function assertCanModerate(
+  actor: Doc<"users">,
+  target: Doc<"users">,
+) {
+  if (roleRank(actor) <= roleRank(target)) {
+    throw new Error("You can only moderate members below your own rank.");
+  }
+}
+
 /** Gate for every owner-only mutation. */
 export async function requireAdmin(ctx: Ctx): Promise<Doc<"users">> {
   const user = await requireUser(ctx);
   if (!isAdmin(user)) {
     throw new Error("Owner access is required for that action.");
+  }
+  return user;
+}
+
+/** Gate for actions a moderator is allowed to take. Owners pass it too. */
+export async function requireModerator(ctx: Ctx): Promise<Doc<"users">> {
+  const user = await requireUser(ctx);
+  if (!isModerator(user)) {
+    throw new Error("Moderator access is required for that action.");
   }
   return user;
 }

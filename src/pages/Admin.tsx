@@ -14,7 +14,7 @@ import { DEFAULT_GAMES } from "@/lib/catalog";
 import { cn } from "@/lib/utils";
 import { Download, Pencil, Plus, Shield, Trash2, X } from "lucide-react";
 
-type RoleChoice = "admin" | "user" | "member";
+type RoleChoice = "admin" | "moderator" | "user" | "member";
 
 type FormState = {
   slug: string;
@@ -518,6 +518,7 @@ export default function Admin() {
                       >
                         <option value="member">Member</option>
                         <option value="user">User</option>
+                        <option value="moderator">Moderator</option>
                         <option value="admin">Owner</option>
                       </select>
                     </div>

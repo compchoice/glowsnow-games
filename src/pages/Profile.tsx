@@ -6,6 +6,7 @@ import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
 import { PageShell } from "@/components/Layout";
 import { MemberAvatar } from "@/components/MemberAvatar";
+import { ModerationActions } from "@/components/ModerationActions";
 import { Eyebrow } from "@/components/SiteChrome";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -13,10 +14,11 @@ import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { AVATAR_EMOJI } from "@/lib/avatar";
 import { cn } from "@/lib/utils";
-import { Check, Crown, MessageSquare, Pencil } from "lucide-react";
+import { Check, Crown, MessageSquare, Pencil, Shield } from "lucide-react";
 
 const ROLE_LABEL: Record<string, string> = {
   admin: "Owner",
+  moderator: "Moderator",
   user: "User",
   member: "Member",
 };
@@ -96,6 +98,12 @@ export default function Profile() {
               <span className="flex items-center gap-1 rounded-full border border-primary/30 bg-primary/10 px-2.5 py-0.5 text-xs font-medium text-primary">
                 <Crown className="size-3" />
                 Owner
+              </span>
+            )}
+            {profile.role === "moderator" && (
+              <span className="flex items-center gap-1 rounded-full border border-primary/30 bg-primary/10 px-2.5 py-0.5 text-xs font-medium text-primary">
+                <Shield className="size-3" />
+                Moderator
               </span>
             )}
             {profile.isAnonymous && (
@@ -216,6 +224,10 @@ export default function Profile() {
 
         {profile.isSelf && <ProfileEditor profile={profile} />}
       </div>
+
+      {!profile.isSelf && (
+        <ModerationActions userId={profile._id} name={profile.name} />
+      )}
     </PageShell>
   );
 }
