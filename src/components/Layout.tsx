@@ -267,39 +267,39 @@ export function SiteFooter() {
         {/* Staff only: the command list hands out console shortcuts, so members
             and guests never see it. */}
         {canModerate && (
-        <div>
-          <p className="text-xs font-medium uppercase tracking-[0.2em] text-muted-foreground">
-            Developer commands
-          </p>
-          <p className="mt-2 text-sm text-muted-foreground">
-            The console sits in the bottom-left corner. Summon it with{" "}
-            <kbd className="rounded border border-border/70 bg-muted px-1.5 py-0.5 text-[11px]">
-              Ctrl + `
-            </kbd>{" "}
-            or the terminal button. Click any command to load it.
-          </p>
-          <ul className="mt-3 space-y-1 text-sm">
-            {DEV_COMMANDS.map((command) => (
-              <li key={command.cmd}>
-                <button
-                  type="button"
-                  onClick={() =>
-                    sendToConsole(
-                      `${command.cmd}${command.args ? ` ${command.args}` : ""}`,
-                    )
-                  }
-                  className="flex w-full gap-2 rounded px-1 py-0.5 text-left transition-colors hover:bg-accent/60"
-                >
-                  <code className="shrink-0 text-primary">
-                    {command.cmd}
-                    {command.args ? ` ${command.args}` : ""}
-                  </code>
-                  <span className="text-muted-foreground">— {command.desc}</span>
-                </button>
-              </li>
-            ))}
-          </ul>
-        </div>
+          <div>
+            <p className="text-xs font-medium uppercase tracking-[0.2em] text-muted-foreground">
+              Developer commands
+            </p>
+            <p className="mt-2 text-sm text-muted-foreground">
+              The console sits in the bottom-left corner. Summon it with{" "}
+              <kbd className="rounded border border-border/70 bg-muted px-1.5 py-0.5 text-[11px]">
+                Ctrl + `
+              </kbd>{" "}
+              or the terminal button. Click any command to load it.
+            </p>
+            <ul className="mt-3 space-y-1 text-sm">
+              {DEV_COMMANDS.map((command) => (
+                <li key={command.cmd}>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      sendToConsole(
+                        `${command.cmd}${command.args ? ` ${command.args}` : ""}`,
+                      )
+                    }
+                    className="flex w-full gap-2 rounded px-1 py-0.5 text-left transition-colors hover:bg-accent/60"
+                  >
+                    <code className="shrink-0 text-primary">
+                      {command.cmd}
+                      {command.args ? ` ${command.args}` : ""}
+                    </code>
+                    <span className="text-muted-foreground">— {command.desc}</span>
+                  </button>
+                </li>
+              ))}
+            </ul>
+          </div>
         )}
       </div>
 
