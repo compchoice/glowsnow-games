@@ -95,4 +95,12 @@ describe("mention matching", () => {
   test("an empty needle set never matches", () => {
     expect(isMentioned("Ana Ana Ana", [])).toBe(false);
   });
+
+  test("matches whole words only, not substrings", () => {
+    const ann = mentionNeedles("Ann", false);
+    expect(isMentioned("that was so annoying", ann)).toBe(false);
+    expect(isMentioned("banana split time", ann)).toBe(false);
+    expect(isMentioned("hey ann", ann)).toBe(true);
+    expect(isMentioned("Ann, you around?", ann)).toBe(true);
+  });
 });

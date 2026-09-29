@@ -41,9 +41,16 @@ export function displayName(user: Doc<"users">): string {
   return "Member";
 }
 
+/**
+ * Whether anyone has claimed the owner seat. Uses the `by_role` index rather
+ * than scanning the table: the site header asks this on every single page.
+ */
 export async function hasAnyAdmin(ctx: Ctx): Promise<boolean> {
-  const users = await ctx.db.query("users").collect();
-  return users.some((user) => user.role === ROLES.ADMIN);
+  const admin = await ctx.db
+    .query("users")
+    .withIndex("by_role", (q) => q.eq("role", ROLES.ADMIN))
+    .first();
+  return admin !== null;
 }
 
 /** Normalizes a title into a URL-safe slug. */

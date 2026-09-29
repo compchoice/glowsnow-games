@@ -206,6 +206,7 @@ export function DevConsole() {
     return (
       <button
         type="button"
+        data-dev-console=""
         onClick={() => setState({ devConsoleOpen: true })}
         className="fixed bottom-4 left-4 z-50 flex items-center gap-2 rounded-lg border border-border/70 bg-card/85 px-3 py-2 text-xs text-muted-foreground backdrop-blur-md transition-colors hover:border-primary/40 hover:text-foreground"
         aria-label="Open the developer console"
@@ -218,7 +219,10 @@ export function DevConsole() {
   }
 
   return (
-    <div className="fixed bottom-4 left-4 z-50 flex h-72 w-[min(24rem,calc(100vw-2rem))] flex-col overflow-hidden rounded-xl border border-border/70 bg-card/95 text-sm backdrop-blur-md">
+    <div
+      data-dev-console=""
+      className="fixed bottom-4 left-4 z-50 flex h-72 w-[min(24rem,calc(100vw-2rem))] flex-col overflow-hidden rounded-xl border border-border/70 bg-card/95 text-sm backdrop-blur-md"
+    >
       <div className="flex items-center justify-between border-b border-border/70 bg-muted/40 px-3 py-2">
         <div className="flex items-center gap-2 text-xs font-medium text-muted-foreground">
           <Terminal className="size-3.5 text-primary" />

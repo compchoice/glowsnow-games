@@ -4,6 +4,7 @@ import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
 import { PageShell } from "@/components/Layout";
 import { Messages } from "@/components/Messages";
+import { ConfirmButton } from "@/components/ConfirmAction";
 import { Eyebrow } from "@/components/SiteChrome";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -12,6 +13,8 @@ import { Switch } from "@/components/ui/switch";
 import { DEFAULT_GAMES } from "@/lib/catalog";
 import { cn } from "@/lib/utils";
 import { Download, Pencil, Plus, Shield, Trash2, X } from "lucide-react";
+
+type RoleChoice = "admin" | "user" | "member";
 
 type FormState = {
   slug: string;
@@ -69,7 +72,15 @@ export default function Admin() {
     null,
   );
 
-  if (status && !status.isAdmin) {
+  if (status === undefined) {
+    return (
+      <PageShell>
+        <p className="text-sm text-muted-foreground">Checking your access…</p>
+      </PageShell>
+    );
+  }
+
+  if (!status.isAdmin) {
     return (
       <PageShell>
         <Eyebrow>Owner only</Eyebrow>
@@ -142,6 +153,43 @@ export default function Admin() {
       setNotice({
         tone: "error",
         text: error instanceof Error ? error.message : "Import failed.",
+      });
+    }
+  }
+
+  async function handleToggleFeatured(id: Id<"games">, featured: boolean) {
+    setNotice(null);
+    try {
+      await setFeatured({ id, featured });
+    } catch (error) {
+      setNotice({
+        tone: "error",
+        text: error instanceof Error ? error.message : "Could not update that game.",
+      });
+    }
+  }
+
+  async function handleDeleteGame(id: Id<"games">, title: string) {
+    setNotice(null);
+    try {
+      await removeGame({ id });
+      setNotice({ tone: "ok", text: `Removed “${title}” from the catalog.` });
+    } catch (error) {
+      setNotice({
+        tone: "error",
+        text: error instanceof Error ? error.message : "Could not remove that game.",
+      });
+    }
+  }
+
+  async function handleSetRole(userId: Id<"users">, role: RoleChoice) {
+    setNotice(null);
+    try {
+      await setRole({ userId, role });
+    } catch (error) {
+      setNotice({
+        tone: "error",
+        text: error instanceof Error ? error.message : "Could not change that role.",
       });
     }
   }
@@ -355,10 +403,7 @@ export default function Admin() {
                           variant="outline"
                           size="sm"
                           onClick={() =>
-                            setFeatured({
-                              id: game._id,
-                              featured: !game.featured,
-                            })
+                            void handleToggleFeatured(game._id, !game.featured)
                           }
                         >
                           {game.featured ? "Unfeature" : "Feature"}
@@ -384,14 +429,22 @@ export default function Admin() {
                         >
                           <Pencil className="size-3.5" />
                         </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className="text-destructive"
-                          onClick={() => removeGame({ id: game._id })}
-                        >
-                          <Trash2 className="size-3.5" />
-                        </Button>
+                        <ConfirmButton
+                          trigger={
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="text-destructive"
+                              aria-label={`Remove ${game.title} from the catalog`}
+                            >
+                              <Trash2 className="size-3.5" />
+                            </Button>
+                          }
+                          title={`Remove “${game.title}” from the catalog?`}
+                          description="It disappears from the games page straight away. Comments on it stay in the database."
+                          confirmLabel="Remove game"
+                          onConfirm={() => handleDeleteGame(game._id, game.title)}
+                        />
                       </div>
                     </td>
                   </tr>
@@ -456,10 +509,10 @@ export default function Admin() {
                       <select
                         value={member.role}
                         onChange={(event) =>
-                          setRole({
-                            userId: member._id as Id<"users">,
-                            role: event.target.value as "admin" | "user" | "member",
-                          })
+                          void handleSetRole(
+                            member._id as Id<"users">,
+                            event.target.value as RoleChoice,
+                          )
                         }
                         className="rounded-md border border-border/70 bg-background px-2 py-1 text-sm"
                       >

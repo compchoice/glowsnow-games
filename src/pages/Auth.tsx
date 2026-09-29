@@ -61,9 +61,9 @@ function Auth({ redirectAfterAuth }: AuthProps = {}) {
       const formData = new FormData(event.currentTarget);
       await signIn("email-otp", formData);
       setStep({ email: formData.get("email") as string });
+      setOtp("");
       setIsLoading(false);
     } catch (error) {
-      console.error("Email sign-in error:", error);
       setError(
         error instanceof Error
           ? error.message
@@ -77,35 +77,32 @@ function Auth({ redirectAfterAuth }: AuthProps = {}) {
     event.preventDefault();
     setIsLoading(true);
     setError(null);
-    try {
-      const formData = new FormData(event.currentTarget);
-      await signIn("email-otp", formData);
-
-      console.log("signed in");
-
-      navigate(redirect);
-    } catch (error) {
-      console.error("OTP verification error:", error);
-
-      setError("The verification code you entered is incorrect.");
-      setIsLoading(false);
-
-      setOtp("");
-    }
+    try {    const formData = new FormData(event.currentTarget);
+    await signIn("email-otp", formData);
+    navigate(redirect);
+  } catch (error) {
+    setError(
+      error instanceof Error && error.message
+        ? `That code didn't work: ${error.message}`
+        : "The verification code you entered is incorrect.",
+    );
+    setIsLoading(false);
+    setOtp("");
+  }
   };
 
   const handleGuestLogin = async () => {
     setIsLoading(true);
     setError(null);
     try {
-      console.log("Attempting anonymous sign in...");
       await signIn("anonymous");
-      console.log("Anonymous sign in successful");
       navigate(redirect);
     } catch (error) {
-      console.error("Guest login error:", error);
-      console.error("Error details:", JSON.stringify(error, null, 2));
-      setError(`Failed to sign in as guest: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      setError(
+        `Failed to sign in as guest: ${
+          error instanceof Error ? error.message : "unknown error"
+        }`,
+      );
       setIsLoading(false);
     }
   };
@@ -242,6 +239,7 @@ function Auth({ redirectAfterAuth }: AuthProps = {}) {
                   <p className="text-sm text-muted-foreground text-center mt-4">
                     Didn't receive a code?{" "}
                     <Button
+                      type="button"
                       variant="link"
                       className="p-0 h-auto"
                       onClick={() => setStep("signIn")}

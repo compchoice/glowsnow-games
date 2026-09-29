@@ -42,7 +42,9 @@ const schema = defineSchema(
       avatar: v.optional(v.string()),
       /** Last time this member opened the notifications tray. */
       notificationsSeenAt: v.optional(v.number()),
-    }).index("email", ["email"]), // index for the email. do not remove or modify
+    })
+      .index("email", ["email"]) // index for the email. do not remove or modify
+      .index("by_role", ["role"]), // lets the header ask "is there an owner?" without scanning every user
 
     // The playable catalog. Owners manage this from the admin area.
     games: defineTable({

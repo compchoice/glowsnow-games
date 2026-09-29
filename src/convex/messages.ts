@@ -75,6 +75,12 @@ export const post = mutation({
       if (parent.scope !== args.scope) {
         throw new Error("Replies must stay in the same thread.");
       }
+      // Without this, a reply can be filed under a different game than the post
+      // it answers. The UI only nests replies under a root it also loaded, so
+      // the mismatch would hide the reply from both pages.
+      if (args.scope === "game" && parent.gameSlug !== args.gameSlug) {
+        throw new Error("Replies must stay on the same game.");
+      }
       // Keep threads one level deep: reply to the root message
       parentId = parent.parentId ?? parent._id;
     }
@@ -105,16 +111,17 @@ export const remove = mutation({
       throw new Error("You can only delete your own messages.");
     }
 
-    // Cascade to replies so no orphaned comments are left behind.
+    // Cascade to replies so no orphaned comments are left behind. Every reply
+    // goes, not just the caller's: the UI only ever nests replies under a root
+    // it also loaded, so a reply whose parent is gone becomes invisible while
+    // still counting towards the author's stats.
     const replies = await ctx.db
       .query("messages")
       .withIndex("by_parent", (q) => q.eq("parentId", id))
       .collect();
 
     for (const reply of replies) {
-      if (reply.authorId === user._id || isAdmin(user)) {
-        await ctx.db.delete(reply._id);
-      }
+      await ctx.db.delete(reply._id);
     }
 
     await ctx.db.delete(id);

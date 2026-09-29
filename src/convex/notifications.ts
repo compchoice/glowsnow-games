@@ -59,6 +59,9 @@ export const list = query({
 
     for (const message of lounge) {
       if (message.authorId === user._id) continue;
+      // Replies get their own "reply" item further down. Listing them here too
+      // would show the same message twice under two different icons.
+      if (message.parentId) continue;
       items.push({
         key: `lounge:${message._id}`,
         kind: "lounge",
@@ -71,12 +74,19 @@ export const list = query({
       });
     }
 
-    for (const root of myRoots) {
-      const replies = await ctx.db
-        .query("messages")
-        .withIndex("by_parent", (q) => q.eq("parentId", root._id))
-        .order("desc")
-        .take(5);
+    // Fan out instead of awaiting each root in turn — twenty-five sequential
+    // round trips is the slowest part of building this tray.
+    const replyGroups = await Promise.all(
+      myRoots.map((root) =>
+        ctx.db
+          .query("messages")
+          .withIndex("by_parent", (q) => q.eq("parentId", root._id))
+          .order("desc")
+          .take(5),
+      ),
+    );
+
+    for (const replies of replyGroups) {
       for (const reply of replies) {
         if (reply.authorId === user._id) continue;
         items.push({
@@ -110,11 +120,12 @@ export const list = query({
     }
 
     items.sort((a, b) => b.createdAt - a.createdAt);
-    const trimmed = items.slice(0, MAX_ITEMS);
 
     return {
-      items: trimmed,
-      unreadCount: trimmed.filter((item) => item.unread).length,
+      items: items.slice(0, MAX_ITEMS),
+      // Counted before trimming, otherwise the badge silently caps out at
+      // MAX_ITEMS on a busy day.
+      unreadCount: items.filter((item) => item.unread).length,
       seenAt,
     };
   },

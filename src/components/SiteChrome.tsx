@@ -13,6 +13,15 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Check, EyeOff, Snowflake } from "lucide-react";
 
+/**
+ * Anything that legitimately owns the Escape key: Radix menus, selects,
+ * dialogs and alert dialogs, plus our own developer console. While one of these
+ * is mounted, Escape means "close me" and must not also fire the panic key.
+ */
+const ESCAPE_OWNERS =
+  "[role='alertdialog'],[role='dialog'],[role='menu'],[role='listbox']," +
+  "[data-radix-popper-content-wrapper],[data-dev-console]";
+
 /** Keeps the cloaked tab title in sync across reloads and route changes. */
 export function SiteEffects() {
   const [state] = useDevTools();
@@ -24,9 +33,12 @@ export function SiteEffects() {
   // The panic key: Escape disguises the tab instantly.
   useEffect(() => {
     function onKey(event: KeyboardEvent) {
-      if (event.key === "Escape" && !devStore.get().panicTab) {
-        setCloak(TAB_PRESETS[0]);
-      }
+      if (event.key !== "Escape") return;
+      // Someone already handled it, or an open menu/dialog/console is about to.
+      if (event.defaultPrevented) return;
+      if (document.querySelector(ESCAPE_OWNERS)) return;
+      if (devStore.get().panicTab) return;
+      setCloak(TAB_PRESETS[0]);
     }
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
